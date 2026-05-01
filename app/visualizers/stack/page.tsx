@@ -6,7 +6,10 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
-import { Plus, Minus, Eye, Layers, Lock, Zap, Clock, TrendingDown } from "lucide-react"
+import { Plus, Minus, Eye, Layers, Lock, Zap, Clock, TrendingDown, Volume2, VolumeX } from "lucide-react"
+
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 
 type StackType = "basic" | "bounded" | "resizable" | "persistent" | "min";
 
@@ -187,6 +190,8 @@ export default function StackVisualizerPage() {
   const [demoOverflow, setDemoOverflow] = useState(false)
   const [demoUnderflow, setDemoUnderflow] = useState(false)
 
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
+
   useEffect(() => {
     const initStack = getInitialStack(stackType);
     setStack(initStack);
@@ -200,7 +205,8 @@ export default function StackVisualizerPage() {
     if (stackType === "persistent") {
       setHistory([initStack]);
     }
-  }, [stackType]);
+    stop()
+  }, [stackType, stop]);
 
   const resetStack = () => {
     const initStack = getInitialStack(stackType);
@@ -215,6 +221,7 @@ export default function StackVisualizerPage() {
     if (stackType === "persistent") {
       setHistory([initStack]);
     }
+    stop()
   };
 
   const effectiveCapacity =
@@ -231,6 +238,7 @@ export default function StackVisualizerPage() {
 
     if (isBoundedFull) {
       setLastOperation("❌ Overflow: capacity reached — cannot push")
+      announce("Overflow! Capacity reached.")
       return
     }
 
@@ -253,6 +261,7 @@ export default function StackVisualizerPage() {
     }
 
     setLastOperation(`✅ Pushed: ${val}`);
+    announce(`Pushed ${val}`)
     setInputValue("");
   };
 
@@ -260,6 +269,7 @@ export default function StackVisualizerPage() {
     if (stack.length <= 1) {
       if (demoUnderflow) {
         setLastOperation("❌ Underflow: cannot pop from empty stack")
+        announce("Underflow! Cannot pop from an empty stack.")
       }
       return;
     }
@@ -283,12 +293,14 @@ export default function StackVisualizerPage() {
     }
 
     setLastOperation(`🗑️ Popped: ${popped.value}`);
+    announce(`Popped ${popped.value}`)
   };
 
   const peekElement = () => {
     if (stack.length <= 1) return;
     const top = stack[stack.length - 1];
     setPeekedValue(top.value);
+    announce(`Peeked at ${top.value}`)
 
     if (stackType !== "persistent") {
       setStack(prev =>
@@ -336,6 +348,101 @@ export default function StackVisualizerPage() {
     </div>
   )
 
+  const StackConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is a Stack?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>Stack</strong> is a linear, fundamental data structure that rigorously follows the <strong>Last-In-First-Out (LIFO)</strong> principle. This means the most recently added element is strictly the first one to be removed.
+          </p>
+          <p>
+            Think of a physical stack of heavy plates. You can safely place a new plate on the top of the stack (<strong>Push</strong>), and you can only remove the plate that is currently resting on the very top (<strong>Pop</strong>). Attempting to pull a plate from the bottom or middle would cause the stack to collapse. You can also look at the top item without removing it (<strong>Peek</strong>).
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Real-World Analogies & Applications:</h4>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Web Browsers:</strong> The Back Button pushes your current page to a history stack. Retreating pops it back.</li>
+              <li><strong>Text Editors:</strong> The Undo/Redo feature uses paired stacks to track state changes.</li>
+              <li><strong>Programming Languages:</strong> The <strong>Call Stack</strong> tracks exactly where a program is in its execution, especially during recursive function calls.</li>
+              <li><strong>Compilers:</strong> Syntax parsing, matching parentheses/brackets, and evaluating mathematical expressions (like converting Infix to Postfix notation).</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="wjI1WNcIntg" title="Data Structures: Stacks and Queues (HackerRank)" />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {(Object.entries(typeDetails) as [StackType, typeof typeDetails[StackType]][]).map(([key, details]) => (
+          <Card key={key} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                {details.icon}
+                {details.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+              <div>
+                <p className="font-medium text-foreground mb-3">{details.description}</p>
+
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Mechanics:</h4>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {details.howItWorks.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+
+                  {details.advancedInsights && (
+                    <div className="bg-muted/30 p-3 rounded-lg">
+                      <h4 className="font-semibold text-foreground mb-1">Advanced Insights:</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-xs">
+                        {details.advancedInsights.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-semibold text-foreground mb-2 text-xs uppercase tracking-wider">Complexity Profile</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex flex-col bg-muted/50 p-2 rounded">
+                    <span className="font-medium text-muted-foreground mb-1">Time</span>
+                    <span className="font-mono text-foreground">{details.complexity.time}</span>
+                  </div>
+                  <div className="flex flex-col bg-muted/50 p-2 rounded">
+                    <span className="font-medium text-muted-foreground mb-1">Space</span>
+                    <span className="font-mono text-foreground">{details.complexity.space}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mt-6 bg-muted/20 border-l-4 border-destructive p-4 rounded-r-lg">
+        <h4 className="font-semibold text-destructive mb-2">Critical Edge Cases</h4>
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            <strong>Stack Overflow:</strong> Occurs when attempting to push an element onto a Stack that has reached its maximum memory allowance (or bounded capacity). This is the notorious cause of crashes in infinite recursive loops.
+          </p>
+          <p>
+            <strong>Stack Underflow:</strong> Occurs when attempting to pop an element from an entirely empty Stack. Safe implementations should return a specific error or null value rather than crashing.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Stack Visualizer"
@@ -348,17 +455,18 @@ export default function StackVisualizerPage() {
         description: "",
         examples: []
       }))}
+      concepts={StackConcepts}
     >
       <div className="w-full space-y-6">
 
-        {/* <div className="flex justify-center">
-          <div className="inline-flex rounded-md border p-1 bg-muted w-full max-w-2xl">
+        <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
+          <div className="inline-flex rounded-md border p-1 bg-muted w-full md:w-auto max-w-2xl overflow-x-auto whitespace-nowrap scrollbar-hide">
             {(["basic", "bounded", "resizable", "persistent", "min"] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setStackType(type)}
                 className={`
-                  flex-1 py-2 text-sm font-medium rounded-sm transition-colors
+                  flex-1 py-2 px-4 text-sm font-medium rounded-sm transition-colors
                   ${stackType === type
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -369,66 +477,16 @@ export default function StackVisualizerPage() {
               </button>
             ))}
           </div>
-        </div> */}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              {details.icon}
-              {details.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-base text-muted-foreground space-y-3 leading-relaxed">
-            <div className="font-medium text-[1.05rem]">
-              {details.description}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <div>
-                <h4 className="font-semibold text-foreground mb-2">How It Works</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm leading-relaxed">
-                  {details.howItWorks.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground mb-2">Common Use Cases</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm leading-relaxed">
-                  {details.useCases.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {details.advancedInsights && (
-              <div className="pt-2">
-                <h4 className="font-semibold text-foreground mb-2">Advanced Insights</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm leading-relaxed">
-                  {details.advancedInsights.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {details.visualizationNotes && (
-              <div className="pt-2">
-                <h4 className="font-semibold text-foreground mb-2">Visualization Notes</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm leading-relaxed">
-                  {details.visualizationNotes.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="pt-2 text-sm">
-              <strong>Complexity:</strong> Time – {details.complexity.time}, Space – {details.complexity.space}
-            </div>
-          </CardContent>
-        </Card>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAudio}
+            title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+            className={`flex items-center gap-2 w-full md:w-auto ${isAudioEnabled ? 'bg-green-100/50 text-green-600 border-green-200 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+          >
+            {isAudioEnabled ? <><Volume2 className="h-4 w-4" /> Audio On</> : <><VolumeX className="h-4 w-4" /> Audio Off</>}
+          </Button>
+        </div>
 
         <div className="flex flex-col items-center space-y-2">
           <div className="text-sm text-muted-foreground mb-2">

@@ -122,6 +122,75 @@ export default function MusicPlaylistApplication() {
     return () => clearTimeout(timer)
   }, [isPlaying, currentSongIndex, songs.length, isCircular])
 
+  const MusicPlaylistConcepts = (
+    <div className="space-y-8">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            Why Linked Lists for Playlists?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            Music playlists require frequent additions, deletions, and reordering — all while maintaining a specific playback sequence. <strong>Linked lists</strong> are perfectly suited for this dynamic behavior because they don't require contiguous blocks of memory.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Industrial Implementations:</h4>
+            <p className="text-sm">Real applications like Spotify or Apple Music use variations of linked lists (specifically <strong>Doubly Linked Lists</strong>) to support features like "Shuffle", "Repeat", and instant skipping between tracks. Each track (Node) maintains a pointer to both the `next` song and the `previous` song.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Key Advantages
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Appending a song</h4>
+                <p className="text-xs">Adding a track to the end of a playlist is instant; there's no need to shift existing tracks backwards or reallocate memory like you would in a static array.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Removing a song</h4>
+                <p className="text-xs">If you have a direct reference to the song (e.g., the user clicks "Remove" on a specific track), deleting it simply involves updating the pointers of the surrounding nodes.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Memory efficiency</h4>
+                <p className="text-xs">Memory is allocated dynamically as songs are added. There is no pre-allocated array space wasted if the playlist only contains a few songs.</p>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+              <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Insert / Delete Complexity:</span>
+              <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(1)</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Circular vs. Linear
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2 text-xs">
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Linear Playlist:</strong> The default behavior. The list has a distinct start (Head) and end (Tail). Reaching the end of the linked list (the <code>next</code> pointer is null) stops playback.</li>
+                <li><strong>Circular Playlist (Loop On):</strong> The last song (Tail) points its <code>next</code> reference back to the first song (Head). This creates a <strong>Circular Linked List</strong>, enabling seamless, infinite looped playback without needing conditional logic to check if you've reached the end of the array.</li>
+                <li><strong>Shuffle:</strong> Often implemented by generating a completely new pseudo-random linked list sequence on the fly, storing it in memory separately from the original playlist to preserve the original order.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
   return (
     // ✅ PASS ONLY ESSENTIAL PROPS — NO ALGORITHM CONTROLS
     // If your VisualizerLayout still shows controls, it's a layout issue — not this page's fault.
@@ -135,35 +204,10 @@ export default function MusicPlaylistApplication() {
         space: "O(n)",
       }}
       applications={[]}
+      concepts={MusicPlaylistConcepts}
     // ⚠️ DO NOT pass: isPlaying, onPlay, onPause, onStep*, onReset, currentStep, totalSteps
     >
       <div className="w-full space-y-6">
-        {/* Explanation Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ChevronRight className="h-5 w-5 text-primary" />
-              Why Linked Lists for Playlists?
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-black">
-            <p>
-              Music playlists require frequent additions, deletions, and reordering — all while maintaining playback order.
-              Linked lists excel here because:
-            </p>
-            <ul className="list-disc pl-5 space-y-1 text-black">
-              <li><strong>Appending a song</strong> is O(1) — no need to shift existing tracks.</li>
-              <li><strong>Removing a song</strong> is O(1) if you have a reference (e.g., user clicks "Remove").</li>
-              <li><strong>Circular linking</strong> enables seamless looped playback without extra logic.</li>
-              <li><strong>Memory efficiency</strong>: No pre-allocated array space wasted.</li>
-            </ul>
-            <p>
-              Real apps like Spotify use doubly linked lists to support "Shuffle", "Repeat", and instant skip —
-              exactly what you’re simulating below!
-            </p>
-          </CardContent>
-        </Card>
-
         {/* Interactive Implementation Card */}
         <Card>
           <CardHeader>

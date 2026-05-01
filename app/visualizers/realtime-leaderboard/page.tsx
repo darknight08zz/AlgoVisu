@@ -305,6 +305,91 @@ export default function LeaderboardPage() {
 
   const topList = topN(topCount)
 
+  const LeaderboardConcepts = (
+    <div className="space-y-8">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            Scaling Real-time Leaderboards
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            In multiplayer games or live events, the leaderboard changes constantly. Using a simple sorted array is too slow because inserting a new score or updating an existing one requires shifting elements, an <code>O(n)</code> operation. When you have millions of players, this causes lag.
+          </p>
+          <p>
+            To handle massive scale and real-time updates, systems often rely on balanced Binary Search Trees. This visualizer demonstrates using an <strong>AVL Tree</strong> to maintain a sorted, always-balanced dataset.
+          </p>
+
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Concepts:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Nodes:</strong> Each player is a node containing their Score, Name, and an internal ID.</li>
+              <li><strong>Balance Factor:</strong> The height difference between a node's left and right subtrees (must be -1, 0, or 1 in an AVL tree).</li>
+              <li><strong>Subtree Size:</strong> Each node tracks how many total nodes exist beneath it. This is the secret to blazing-fast rank queries.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Why an AVL Tree?
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Ordered Inserts</h4>
+                <p className="text-xs">Players are instantly slotted into the correct position based on their score (descending) without shifting other elements.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Self-Balancing</h4>
+                <p className="text-xs">Every add, update, or delete operation triggers an automatic rotation if the tree becomes unbalanced. This guarantees the tree never degrades into a slow, linear chain like a linked list.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Stable Tie-Breakers</h4>
+                <p className="text-xs">If two players have the exact same score, the tree resolves the tie alphabetically by name, ensuring a consistent determinative order.</p>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+              <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Write Complexity:</span>
+              <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(log n)</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Fast Queries
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Rank Queries</h4>
+                <p className="text-xs">By augmenting nodes to store the size of their subtrees (<code>sz</code>), we can calculate any player's exact 1-based rank by traversing down the tree and summing the sizes of the left subtrees we bypass.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Top-N List</h4>
+                <p className="text-xs">To show the top players, we perform a left-biased in-order traversal, collecting the first N nodes. This is incredibly fast for generating the "first page" of the leaderboard without sorting all data.</p>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+              <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Read Complexity:</span>
+              <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(log n)</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
   return (
     <VisualizerLayout
       title="Real-time Leaderboard (AVL-backed)"
@@ -314,37 +399,9 @@ export default function LeaderboardPage() {
         time: "Insert/Update/Delete/Rank: O(log n)",
         space: "O(n)",
       }}
+      concepts={LeaderboardConcepts}
     >
       <div className="w-full space-y-8">
-        {/* Intro / Explanation */}
-        <Card className="bg-orange-50 border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5" />
-              How this works
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Make description text black */}
-            <CardDescription className="text-sm text-black leading-relaxed space-y-2">
-              <p>
-                This leaderboard keeps players ordered by <strong>score (descending)</strong> using an <em>AVL Tree</em>.
-                Every add, update, or delete operation rebalances the tree so that it stays near-perfectly balanced.
-              </p>
-              <ul className="list-disc pl-5">
-                <li><strong>Ordered inserts:</strong> players slot into the correct position by score in O(log n).</li>
-                <li><strong>Stable tie-breakers:</strong> ties resolve by name, then by an internal ID.</li>
-                <li><strong>Rank queries:</strong> subtree sizes let us compute a player’s 1-based rank in O(log n).</li>
-                <li><strong>Top-N:</strong> collect the first N entries from the left-biased in-order traversal.</li>
-                <li><strong>Real-time:</strong> simulate frequent updates without losing performance.</li>
-              </ul>
-              <p className="pt-1">
-                This pattern fits real-time leaderboards for games, hackathons, classrooms and more. Persist by
-                snapshotting the tree or mirroring updates to a database.
-              </p>
-            </CardDescription>
-          </CardContent>
-        </Card>
 
         {/* Controls */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -432,11 +489,11 @@ export default function LeaderboardPage() {
               <div className="text-sm">
                 {queryName.trim()
                   ? (() => {
-                      const r = rankOfName(queryName)
-                      return r
-                        ? <span><strong>{queryName}</strong> is currently <strong>#{r}</strong></span>
-                        : <span className="text-muted-foreground">No such player.</span>
-                    })()
+                    const r = rankOfName(queryName)
+                    return r
+                      ? <span><strong>{queryName}</strong> is currently <strong>#{r}</strong></span>
+                      : <span className="text-muted-foreground">No such player.</span>
+                  })()
                   : <span className="text-muted-foreground">Enter a name to view rank.</span>
                 }
               </div>

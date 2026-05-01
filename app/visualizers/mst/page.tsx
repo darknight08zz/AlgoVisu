@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { Badge } from "../../../components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../components/ui/tabs"
-import { Plus, Shuffle } from "lucide-react"
+import { Plus, Shuffle, Play, Pause, StepBack, StepForward, RotateCcw } from "lucide-react"
 import type { JSX } from "react/jsx-runtime"
 
 interface GraphNode {
@@ -34,6 +34,8 @@ interface MSTStep {
   visitedNodes?: string[]
   candidateEdges?: string[]
   codeLine?: number
+  pq?: { node: string; key: number | string }[] // Changed key to string to support edge names in Kruskal's
+  disjointSets?: { [root: string]: string[] }
 }
 
 type AlgorithmType = "prim" | "kruskal"
@@ -256,9 +258,12 @@ export default function MSTVisualizerPage() {
       parent[node.id] = null
     }
 
+    const getPQ = () => Array.from(inQueue).map(n => ({ node: n, key: key[n] })).sort((a, b) => a.key - b.key)
+
     steps.push({
       description: `Initialize keys. Start node: ${startNode}`,
       mstEdges: [],
+      pq: getPQ(),
       codeLine: 6,
     })
 
@@ -283,6 +288,7 @@ export default function MSTVisualizerPage() {
           description: `Added edge ${edgeKey} (weight: ${key[minNode]}) to MST`,
           mstEdges: [...mstEdges],
           visitedNodes: Array.from(visited),
+          pq: getPQ(),
           codeLine: 10,
         })
       } else {
@@ -290,6 +296,7 @@ export default function MSTVisualizerPage() {
           description: `Started from node ${minNode}`,
           mstEdges: [...mstEdges],
           visitedNodes: Array.from(visited),
+          pq: getPQ(),
           codeLine: 9,
         })
       }
@@ -307,6 +314,7 @@ export default function MSTVisualizerPage() {
               description: `Updated key of ${v} to ${edge.weight} via ${minNode}`,
               mstEdges: [...mstEdges],
               candidateEdges: [`${minNode}-${v}`],
+              pq: getPQ(),
               codeLine: 13,
             })
           }
@@ -325,9 +333,21 @@ export default function MSTVisualizerPage() {
     const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight)
     const uf = new UnionFind(nodes.map(n => n.id))
 
+    const getDisjointSets = () => {
+      const sets: { [root: string]: string[] } = {}
+      for (const node of nodes) {
+        const root = uf.find(node.id)
+        if (!sets[root]) sets[root] = []
+        sets[root].push(node.id)
+      }
+      return sets
+    }
+
     steps.push({
       description: "Sorted all edges by weight",
       mstEdges: [],
+      pq: sortedEdges.map(e => ({ node: `${e.from}-${e.to}`, key: e.weight })),
+      disjointSets: getDisjointSets(),
       codeLine: 3,
     })
 
@@ -341,6 +361,8 @@ export default function MSTVisualizerPage() {
         description: `Checking edge ${u}-${v} (weight: ${edge.weight})`,
         mstEdges: [...mstEdges],
         candidateEdges: [`${u}-${v}`],
+        pq: sortedEdges.slice(sortedEdges.indexOf(edge)).map(e => ({ node: `${e.from}-${e.to}`, key: e.weight })),
+        disjointSets: getDisjointSets(),
         codeLine: 5,
       })
 
@@ -350,12 +372,16 @@ export default function MSTVisualizerPage() {
         steps.push({
           description: `Added edge ${u}-${v} to MST`,
           mstEdges: [...mstEdges],
+          pq: sortedEdges.slice(sortedEdges.indexOf(edge) + 1).map(e => ({ node: `${e.from}-${e.to}`, key: e.weight })),
+          disjointSets: getDisjointSets(),
           codeLine: 7,
         })
       } else {
         steps.push({
           description: `Skipped edge ${u}-${v} (would form cycle)`,
           mstEdges: [...mstEdges],
+          pq: sortedEdges.slice(sortedEdges.indexOf(edge) + 1).map(e => ({ node: `${e.from}-${e.to}`, key: e.weight })),
+          disjointSets: getDisjointSets(),
           codeLine: 5,
         })
       }
@@ -626,17 +652,101 @@ export default function MSTVisualizerPage() {
     },
   ]
 
+  const MSTConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is a Minimum Spanning Tree?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            An <strong>MST</strong> is a subset of edges that connects all vertices of a connected, undirected, weighted graph with the minimum possible total edge weight, without forming any cycles.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Properties:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li>For a graph with <strong>V</strong> vertices, an MST always contains exactly <strong>V - 1</strong> edges.</li>
+              <li>If all edge weights in the graph are unique, there is only exactly <strong>one</strong> true MST. If weights repeat, there can be multiple valid MSTs with the same total minimum weight.</li>
+              <li>An MST is not necessarily the shortest path between any two specific nodes (that's Dijkstra's job). Instead, it minimizes the cost of connecting the <em>entire network</em>.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Prim's Algorithm (Vertex-Centric)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <p className="text-xs">
+              Prim's grows a single, contiguous tree outward. It drops a seed (a chosen start vertex) and repeatedly pulls in the closest, cheapest neighbor to its expanding tree until everyone is connected.
+            </p>
+
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">How it works:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs">
+                  <li>Start at an arbitrary vertex.</li>
+                  <li>Look at all available edges radiating out from your current tree.</li>
+                  <li>Pick the very cheapest one that connects to an unvisited vertex.</li>
+                  <li>Repeat until all vertices are reached.</li>
+                </ul>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <h4 className="font-semibold text-foreground mb-1 text-[11px] uppercase tracking-wider">Time Complexity & Use Case</h4>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(E log V)</Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Very efficient for <strong>dense graphs</strong> (where V &lt;&lt; E). Uses a Min-Priority Queue to instantly find the next cheapest edge.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Kruskal's Algorithm (Edge-Centric)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <p className="text-xs">
+              Kruskal's ignores where edges are. Instead, it sorts every single edge in the world by price from cheapest to most expensive, and buys them one by one as long as they don't create a loop.
+            </p>
+
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">How it works:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs">
+                  <li>Sort all edges by weight, lowest to highest.</li>
+                  <li>Iterate through the sorted queue. If adding the edge creates a cycle, throw it away.</li>
+                  <li>If it connects two separate clusters safely, keep it.</li>
+                </ul>
+              </div>
+              <div className="bg-muted/30 p-2 rounded flex flex-col">
+                <h4 className="font-semibold text-foreground mb-1 text-[11px] uppercase tracking-wider">Time Complexity & Use Case</h4>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(E log E) or O(E log V)</Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Often preferred for <strong>sparse graphs</strong>. Heavily relies on the <strong>Union-Find (Disjoint Set)</strong> data structure to detect cycles instantly in near <code>O(1)</code> time.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Minimum Spanning Tree Visualizer"
       description="Learn Prim's and Kruskal's algorithms for MST"
       difficulty="Advanced"
-      isPlaying={isPlaying}
-      onPlay={play}
-      onPause={pause}
-      onStepBack={stepBack}
-      onStepForward={stepForward}
-      onReset={reset}
       currentStep={currentStep}
       totalSteps={mstSteps.length}
       complexity={{
@@ -644,37 +754,16 @@ export default function MSTVisualizerPage() {
         space: "O(V)",
       }}
       applications={applications}
+      concepts={MSTConcepts}
     >
       <div className="w-full space-y-6">
 
-        {/* ===== TOP: MST Overview + Algorithm Selector ===== */}
-        <div className="grid lg:grid-cols-3 gap-4">
-          {/* MST Overview */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">What is a Minimum Spanning Tree (MST)?</CardTitle>
-              <CardDescription className="space-y-4 text-sm text-muted-foreground">
-                An MST is a subset of edges that connects all vertices of a connected, undirected, weighted graph
-                with the minimum possible total edge weight, without cycles (|V|-1 edges).
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm space-y-3 text-muted-foreground">
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Applicable to connected, undirected, weighted graphs.</li>
-                <li>If edge weights are unique, the MST is unique; otherwise multiple MSTs can exist.</li>
-                <li>Typical uses: network design, clustering, approximation algorithms.</li>
-              </ul>
-              <div className="text-muted-foreground">
-                Select an algorithm on the right to learn how it constructs an MST, then press <b>Play</b> or step through.
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Algorithm Tabs Selector */}
+        {/* ===== TOP: Algorithm Selector & Controls ===== */}
+        <div className="grid lg:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Choose Algorithm</CardTitle>
-              <CardDescription className="space-y-4 text-sm text-muted-foreground">Switch to see detailed guidance</CardDescription>
+              <CardDescription className="space-y-4 text-sm text-muted-foreground">Select the algorithm to visualize</CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs
@@ -696,67 +785,141 @@ export default function MSTVisualizerPage() {
               </Tabs>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Deep-dive info panel that swaps with selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg text-foreground">Detailed Algorithm Info</CardTitle>
-            <CardDescription>{currentAlgorithm.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-            <div className="md:col-span-2 space-y-2">
-              <div><b>How it works:</b> {currentAlgorithm.description}</div>
-              <div className="grid sm:grid-cols-2 gap-2">
-                <div>
-                  <b>When to use</b>
-                  <ul className="list-disc pl-5">
-                    {currentAlgorithm.whenToUse.map((w, i) => <li key={i}>{w}</li>)}
-                  </ul>
-                </div>
-                <div>
-                  <b>Key ideas</b>
-                  <ul className="list-disc pl-5">
-                    {currentAlgorithm.keyIdeas.map((k, i) => <li key={i}>{k}</li>)}
-                  </ul>
-                </div>
+          {/* Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Algorithm Controls</CardTitle>
+              <CardDescription className="space-y-4 text-sm text-muted-foreground">Play, pause, and step through the algorithm</CardDescription>
+            </CardHeader>
+            <CardContent className="h-full flex flex-col justify-center pb-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={play} disabled={isPlaying || currentStep === mstSteps.length - 1}>
+                  <Play className="w-4 h-4 mr-2" /> Play
+                </Button>
+                <Button onClick={pause} disabled={!isPlaying} variant="outline">
+                  <Pause className="w-4 h-4 mr-2" /> Pause
+                </Button>
+                <Button onClick={stepBack} disabled={isPlaying || currentStep === 0} variant="outline">
+                  <StepBack className="w-4 h-4" />
+                </Button>
+                <Button onClick={stepForward} disabled={isPlaying || currentStep === mstSteps.length - 1} variant="outline">
+                  <StepForward className="w-4 h-4" />
+                </Button>
+                <Button onClick={reset} disabled={isPlaying || (currentStep === 0 && mstSteps.length === 0)} variant="outline">
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
               </div>
-            </div>
-            <div className="space-y-2">
-              <div><b>Time:</b> {currentAlgorithm.timeComplexity}</div>
-              <div><b>Space:</b> {currentAlgorithm.spaceComplexity}</div>
-              {algorithm === "prim" && (
-                <div className="text-muted-foreground">
-                  Tip: Choose a <b>Start Node</b> for Prim’s in the controls below before running.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Graph */}
         <div className="flex justify-center p-4 bg-muted/10 rounded-lg">{renderGraph()}</div>
 
-        {/* Pseudocode */}
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">Pseudocode</CardTitle>
-          </CardHeader>
-          <div className="font-mono text-sm bg-muted p-4 rounded-md max-h-96 overflow-y-auto">
-            {currentPseudocode.map((line, index) => (
-              <div
-                key={index}
-                className={`py-1 px-2 rounded ${currentCodeLine === index + 1
-                  ? "bg-primary/20 border-l-4 border-primary text-primary-foreground"
-                  : "text-muted-foreground"
-                  }`}
-              >
-                <span className="text-xs text-muted-foreground/70 mr-3">{index + 1}</span>
-                {line || "\u00A0"}
-              </div>
-            ))}
-          </div>
-        </Card>
+        {/* Pseudocode and Aux Panel */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="h-fit">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">Pseudocode</CardTitle>
+            </CardHeader>
+            <div className="font-mono text-sm bg-muted p-4 rounded-md max-h-96 overflow-y-auto">
+              {currentPseudocode.map((line, index) => (
+                <div
+                  key={index}
+                  className={`py-1 px-2 rounded ${currentCodeLine === index + 1
+                    ? "bg-primary/20 border-l-4 border-primary text-primary-foreground"
+                    : "text-muted-foreground"
+                    }`}
+                >
+                  <span className="text-xs text-muted-foreground/70 mr-3">{index + 1}</span>
+                  {line || "\u00A0"}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Auxiliary Data Structure (Min-PQ / Disjoint Sets) */}
+          <Card className="h-fit flex flex-col md:col-span-2 lg:col-span-1 border-primary/20">
+            <CardHeader className="py-3 px-4 bg-muted/50 border-b">
+              <CardTitle className="flex items-center justify-between text-sm">
+                <span>{algorithm === "prim" ? "Min-Priority Queue" : "Edge Queue & Disjoint Sets"}</span>
+              </CardTitle>
+            </CardHeader>
+            <div className="p-4 flex-1 flex flex-col gap-4 bg-muted/10 rounded-b-md min-h-[220px] overflow-hidden">
+              {mstSteps.length > 0 && currentStep < mstSteps.length ? (
+                algorithm === "prim" ? (
+                  /* Prim's Priority Queue Visualization */
+                  <div className="w-full overflow-x-auto pb-2">
+                    <div className="flex gap-2 items-center min-w-max px-2">
+                      <span className="text-xs font-bold text-muted-foreground uppercase mr-2 shrink-0">Min</span>
+                      {!mstSteps[currentStep].pq || mstSteps[currentStep].pq!.length === 0 ? (
+                        <div className="px-4 py-2 border-2 border-dashed border-muted rounded-md text-muted-foreground italic text-sm">Empty Queue</div>
+                      ) : (
+                        mstSteps[currentStep].pq!.map((item, idx) => (
+                          <div key={`${idx}-${item.node}`} className="flex flex-col items-center">
+                            <div className={`w-14 h-14 flex flex-col items-center justify-center font-bold rounded-md shadow-sm border ${idx === 0 ? 'bg-orange-100 border-orange-400 text-orange-900 scale-105' : 'bg-background border-border text-foreground'}`}>
+                              <span className="text-sm">{item.node}</span>
+                              <span className="text-xs text-muted-foreground font-mono mt-0.5">{item.key === Infinity ? '∞' : item.key}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Kruskal's Queue + sets */
+                  <div className="flex flex-col gap-4 h-full">
+                    {/* Edge Queue */}
+                    <div className="w-full overflow-x-auto pb-2">
+                      <div className="flex gap-2 items-center min-w-max px-2">
+                        <span className="text-xs font-bold text-muted-foreground uppercase mr-2 shrink-0">Eval</span>
+                        {!mstSteps[currentStep].pq || mstSteps[currentStep].pq!.length === 0 ? (
+                          <div className="px-4 py-2 border-2 border-dashed border-muted rounded-md text-muted-foreground italic text-sm">Empty</div>
+                        ) : (
+                          mstSteps[currentStep].pq!.map((item, idx) => (
+                            <div key={`${idx}-${item.node}`} className="flex flex-col items-center">
+                              <div className={`px-3 py-1.5 flex flex-col items-center justify-center font-bold rounded-sm shadow-sm border ${idx === 0 ? 'bg-blue-100 border-blue-400 text-blue-900 scale-105' : 'bg-background border-border text-foreground'}`}>
+                                <span className="text-xs">{item.node}</span>
+                                <span className="text-[10px] text-muted-foreground font-mono">w:{item.key}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    {/* Disjoint Sets Visualization */}
+                    <div className="w-full h-full flex flex-wrap gap-2 content-start overflow-y-auto max-h-[150px] p-1 border-t pt-3">
+                      <div className="w-full text-xs font-bold text-muted-foreground uppercase mb-1">Union-Find Trees</div>
+                      {!mstSteps[currentStep].disjointSets || Object.keys(mstSteps[currentStep].disjointSets!).length === 0 ? (
+                        <div className="w-full py-4 text-center border-2 border-dashed border-muted rounded-md text-muted-foreground italic text-sm">
+                          Initializing Sets...
+                        </div>
+                      ) : (
+                        Object.entries(mstSteps[currentStep].disjointSets!).map(([root, members], idx) => (
+                          <div key={root} className="flex flex-col border border-border rounded-md shadow-sm bg-background overflow-hidden flex-1 min-w-[80px]">
+                            <div className="bg-slate-100 px-2 text-[10px] font-bold text-center border-b">Root: {root}</div>
+                            <div className="p-1.5 flex gap-1 flex-wrap justify-center">
+                              {members.map(member => (
+                                <span key={member} className={`w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-full text-white ${member === root ? 'bg-indigo-600' : 'bg-indigo-400'}`}>
+                                  {member}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full text-sm text-muted-foreground italic">
+                  Start algorithm to view {algorithm === "prim" ? "Priority Queue" : "Data Structures"}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
 
         {/* Controls */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -941,18 +1104,49 @@ export default function MSTVisualizerPage() {
         {mstSteps.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Current Step</CardTitle>
+              <CardTitle className="text-lg">Step Details & Auxiliary Data</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="text-sm p-3 bg-accent/10 rounded-lg border border-accent/20">
                 {mstSteps[currentStep]?.description || "Ready to start"}
               </div>
+
+              {algorithm === "prim" && mstSteps[currentStep]?.pq && (
+                <div>
+                  <div className="text-sm font-medium mb-2 text-muted-foreground">Priority Queue (Min-Heap):</div>
+                  <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                    {mstSteps[currentStep].pq!.length === 0 && <span className="text-muted-foreground text-sm italic">Empty</span>}
+                    {mstSteps[currentStep].pq!.map((item, index) => (
+                      <Badge key={index} variant="secondary" className="text-sm px-3 py-1 bg-amber-100 text-amber-800 border-amber-200 flex items-center gap-1">
+                        <span className="font-bold">{item.node}</span>
+                        <span className="text-xs opacity-70 border-l border-amber-300 pl-1 ml-1">{item.key === Infinity ? '∞' : item.key}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {algorithm === "kruskal" && mstSteps[currentStep]?.disjointSets && (
+                <div>
+                  <div className="text-sm font-medium mb-2 text-muted-foreground">Disjoint Sets (Union-Find):</div>
+                  <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                    {Object.entries(mstSteps[currentStep].disjointSets!).map(([root, members], index) => (
+                      <div key={index} className="flex flex-col border rounded-md overflow-hidden text-xs">
+                        <div className="bg-slate-200 text-slate-800 font-bold px-2 py-1 text-center border-b">Set {root}</div>
+                        <div className="bg-slate-50 px-2 py-1">{members.join(", ")}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {mstSteps[currentStep]?.mstEdges && (
-                <div className="mt-3">
-                  <div className="text-sm font-medium mb-1">MST Edges ({mstSteps[currentStep].mstEdges.length}):</div>
+                <div>
+                  <div className="text-sm font-medium mb-1 text-muted-foreground">MST Edges ({mstSteps[currentStep].mstEdges.length}):</div>
                   <div className="flex gap-1 flex-wrap">
+                    {mstSteps[currentStep].mstEdges.length === 0 && <span className="text-muted-foreground text-sm italic">None</span>}
                     {mstSteps[currentStep].mstEdges.map((e, i) => (
-                      <Badge key={i} variant="outline">{e}</Badge>
+                      <Badge key={i} variant="outline" className="bg-green-50 text-green-800 border-green-200">{e}</Badge>
                     ))}
                   </div>
                 </div>

@@ -67,6 +67,8 @@ export default function SocialNetworkAnalyzer() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const svgRef = useRef<SVGSVGElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [activeQueue, setActiveQueue] = useState<string[]>([])
+  const analysisCounter = useRef(0)
 
   // Initialize sample network
   useEffect(() => {
@@ -151,28 +153,53 @@ export default function SocialNetworkAnalyzer() {
   }
 
   // Community Detection
-  const detectCommunities = () => {
+  const detectCommunities = async () => {
+    analysisCounter.current += 1
+    const currentAnalysis = analysisCounter.current
     const visited = new Set<string>()
     const communitiesList: Community[] = []
     const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
-    people.forEach((person) => {
+
+    // Clear old state before re-running
+    setPeople((prev) => prev.map((p) => ({ ...p, color: undefined, community: undefined })))
+    setActiveQueue([])
+
+    for (const person of people) {
+      if (currentAnalysis !== analysisCounter.current) return;
       if (!visited.has(person.id)) {
         const community: string[] = []
         const queue = [person.id]
+
         while (queue.length > 0) {
+          if (currentAnalysis !== analysisCounter.current) return;
           const current = queue.shift()!
+
+          setActiveQueue([...queue])
+
           if (visited.has(current)) continue
           visited.add(current)
           community.push(current)
+
           connections.forEach((conn) => {
-            if (conn.from === current && !visited.has(conn.to) && conn.weight >= 6) {
+            if (conn.from === current && !visited.has(conn.to) && conn.weight >= 6 && !queue.includes(conn.to)) {
               queue.push(conn.to)
             }
-            if (conn.to === current && !visited.has(conn.from) && conn.weight >= 6) {
+            if (conn.to === current && !visited.has(conn.from) && conn.weight >= 6 && !queue.includes(conn.from)) {
               queue.push(conn.from)
             }
           })
+
+          setActiveQueue([...queue])
+
+          const currentCommunityId = communitiesList.length
+          setPeople((prev) => prev.map(p => {
+            if (community.includes(p.id)) return { ...p, community: currentCommunityId, color: colors[currentCommunityId % colors.length] }
+            return p
+          }))
+
+          await new Promise(resolve => setTimeout(resolve, 600)) // Pause to allow UI update Queue
         }
+
         if (community.length > 0) {
           communitiesList.push({
             id: communitiesList.length,
@@ -181,18 +208,9 @@ export default function SocialNetworkAnalyzer() {
           })
         }
       }
-    })
+    }
+    setActiveQueue([])
     setCommunities(communitiesList)
-    setPeople((prev) =>
-      prev.map((p) => {
-        const community = communitiesList.find((c) => c.members.includes(p.id))
-        return {
-          ...p,
-          community: community?.id,
-          color: community?.color,
-        }
-      })
-    )
   }
 
   // Influence Calculation (PageRank)
@@ -348,7 +366,8 @@ export default function SocialNetworkAnalyzer() {
   // Connection Management
   const addConnection = () => {
     if (!connectFrom || !connectTo || connectFrom === connectTo) return
-    const weight = parseInt(interactionWeight) || 5
+    const parsedWeight = parseInt(interactionWeight)
+    const weight = isNaN(parsedWeight) ? 5 : parsedWeight
     const exists = connections.find(
       (c) => (c.from === connectFrom && c.to === connectTo) || (c.from === connectTo && c.to === connectFrom)
     )
@@ -451,7 +470,8 @@ export default function SocialNetworkAnalyzer() {
         if (values.length < 3) continue;
         const person1 = values[headers.indexOf('person1')];
         const person2 = values[headers.indexOf('person2')];
-        const weight = parseInt(values[headers.indexOf('interaction_strength')]) || 5;
+        const parsedWeight = parseInt(values[headers.indexOf('interaction_strength')]);
+        const weight = isNaN(parsedWeight) ? 5 : parsedWeight;
         const type = headers.includes('type')
           ? values[headers.indexOf('type')] || 'other'
           : 'other';
@@ -718,6 +738,81 @@ export default function SocialNetworkAnalyzer() {
 
   const currentMode = modeInfo[analysisMode]
 
+  const SNAConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is Social Network Analysis?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            <strong>Social Network Analysis (SNA)</strong> is the process of investigating social structures using networks and graph theory. It characterizes networked structures in terms of <em>nodes</em> (individual actors, people, or things within the network) and the <em>ties, edges, or links</em> (relationships or interactions) that connect them.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Real-World Examples:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Social Media:</strong> Recommending friends (Facebook), identifying influencers (Twitter/X).</li>
+              <li><strong>Epidemiology:</strong> Tracking the spread of diseases through human contact networks.</li>
+              <li><strong>Fraud Detection:</strong> Uncovering organized crime rings by analyzing transaction networks between bank accounts.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Core Metrics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Density</h4>
+                <p className="text-xs">The proportion of potential connections in a network that actually exist. A dense network has many connections; a sparse network has few.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Clustering Coefficient</h4>
+                <p className="text-xs">A measure of the degree to which nodes in a graph tend to cluster together. High clustering implies that a person's friends are likely to be friends with each other.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Betweenness Centrality</h4>
+                <p className="text-xs">Quantifies the number of times a node acts as a bridge along the shortest path between two other nodes. High betweenness indicates an individual who connects disparate groups (a "broker").</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Common Algorithms
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Friend Recommendation</h4>
+                <p className="text-xs">Based on <em>Triadic Closure</em>. If Alice knows Bob, and Bob knows Carol, there is a high probability Alice will know Carol. Often solved by finding common neighbors.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Community Detection</h4>
+                <p className="text-xs">Finding groups of nodes that are densely connected internally but loosely connected to the rest of the network (e.g., using algorithms like Louvain or Girvan-Newman).</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Influence (PageRank)</h4>
+                <p className="text-xs">Calculates the importance of a node by counting the number and quality of links to it. A node is important if it receives links from other important nodes.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Social Network Analysis"
@@ -729,23 +824,82 @@ export default function SocialNetworkAnalyzer() {
         space: currentMode.space,
       }}
       applications={[]}
+      concepts={SNAConcepts}
     >
       <div className="w-full space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Social Network Analysis</CardTitle>
+
+        <div className="flex justify-center p-4 bg-muted/10 rounded-lg">{renderNetwork()}</div>
+
+        {/* Auxiliary Data / Metrics Visualization */}
+        <Card className="border-border">
+          <CardHeader className="py-3 px-4 bg-muted/30 border-b">
+            <CardTitle className="text-sm font-semibold flex items-center">
+              <span>
+                {analysisMode === "community" && "Active Queue (BFS Community Detection)"}
+                {analysisMode === "influence" && "PageRank Influence Array"}
+                {analysisMode === "advanced" && "Centrality & Clustering Array"}
+                {analysisMode === "friends" && "Friend Recommendations Array"}
+              </span>
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-black-900 mb-2">
-              This application demonstrates real-world graph algorithms on social networks:
-              friend recommendations (common neighbors), community detection (connected components with edge thresholds),
-              influence ranking (PageRank), and advanced metrics like betweenness centrality and clustering coefficient.
-              These techniques power recommendation systems, fraud detection, marketing, and organizational analysis.
-            </p>
+          <CardContent className="p-4 bg-muted/10">
+            <div className="w-full overflow-x-auto pb-2">
+              <div className="flex items-center min-w-max">
+                {analysisMode === "community" && (
+                  <>
+                    <span className="text-xs font-bold text-muted-foreground uppercase mr-3">Next</span>
+                    <div className="flex items-center gap-2 transition-all duration-200 min-h-[40px]">
+                      {activeQueue.length === 0 ? (
+                        <div className="px-3 py-1 border border-dashed rounded text-xs text-muted-foreground italic">Queue Empty</div>
+                      ) : (
+                        activeQueue.map((id, idx) => {
+                          const isTop = idx === 0
+                          return (
+                            <div key={`${idx}-${id}`} className="flex items-center">
+                              <div className={`px-3 py-1.5 text-xs font-mono font-bold rounded shadow-sm border whitespace-nowrap ${isTop ? 'bg-blue-100 border-blue-400 text-blue-800 scale-105' : 'bg-background border-border text-foreground'}`}>
+                                {id}
+                              </div>
+                              {idx < activeQueue.length - 1 && <div className="text-xs text-muted-foreground px-1.5">←</div>}
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
+                {analysisMode === "influence" && (
+                  <div className="flex gap-2">
+                    {influencers.length === 0 ? <span className="text-xs text-muted-foreground italic">Calculating...</span> :
+                      influencers.map((inf, idx) => (
+                        <div key={inf.id} className="flex flex-col items-center bg-background border rounded shadow-sm p-1.5 min-w-[60px]">
+                          <span className="text-xs font-bold">{inf.id}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{inf.score.toFixed(2)}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+                {analysisMode === "advanced" && (
+                  <div className="flex gap-2">
+                    {people.filter(p => p.betweenness !== undefined).length === 0 ? <span className="text-xs text-muted-foreground italic">Calculating...</span> :
+                      people.map((p, idx) => (
+                        <div key={p.id} className="flex flex-col items-center bg-background border rounded shadow-sm p-1.5 min-w-[80px]">
+                          <span className="text-xs font-bold">{p.name}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">B: {(p.betweenness || 0).toFixed(2)}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">C: {(p.clustering || 0).toFixed(2)}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+                {analysisMode === "friends" && (
+                  <span className="text-xs text-muted-foreground italic">Select a person to view recommendation processing.</span>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="flex justify-center p-4 bg-muted/10 rounded-lg">{renderNetwork()}</div>
         <div className="grid md:grid-cols-3 gap-4">
           <Card>
             <CardHeader>
@@ -867,7 +1021,7 @@ export default function SocialNetworkAnalyzer() {
                   value={interactionWeight}
                   onChange={(e) => setInteractionWeight(e.target.value)}
                   className="w-20"
-                  min="1"
+                  min="-10"
                   max="10"
                 />
                 <Select value={connectionType} onValueChange={setConnectionType}>

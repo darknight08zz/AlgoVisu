@@ -137,6 +137,101 @@ export default function PrefixSearchVisualizerPage() {
     if (query) setTimeout(() => performSearch(), 100)
   }
 
+  const PrefixSearchConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            Prefix Search & Autocomplete
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            <strong>Prefix Search</strong> is the foundational mechanic behind almost every "typeahead" or autocomplete feature you use daily—from Google Search suggestions to your IDE's Intellisense, to finding a friend in your contact list. The goal is simple: given a dataset of strings, instantly find all entries that begin with a specific sequence of characters (the <em>Prefix</em>).
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Real-World Examples:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Search Engines:</strong> Typing "how to ti" immediately suggests "how to tie a tie".</li>
+              <li><strong>Code Editors (IDE):</strong> Typing <code>docu</code> suggests <code>document.getElementById</code>.</li>
+              <li><strong>E-commerce:</strong> Typing "lap" suggests laptops, lapel pins, etc.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <List className="w-5 h-5 text-primary" />
+              Naïve Approach (Linear Scan)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <p className="text-xs">
+              This visualizer demonstrates the simplest, most direct method. It is highly effective and widely used for small datasets (like a dropdown of 50 countries or a handful of UI elements).
+            </p>
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">How it works:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs">
+                  <li>Takes the user's input prefix.</li>
+                  <li>Iterates through <em>every single word</em> in the unorganized array one by one.</li>
+                  <li>Checks if the word starts with the prefix (e.g., using <code>.startsWith()</code>).</li>
+                </ul>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <h4 className="font-semibold text-red-600 dark:text-red-400 mb-1 text-[11px] uppercase tracking-wider">Complexity: O(n × m)</h4>
+                <p className="text-[10px] leading-tight mt-1 text-muted-foreground">
+                  Where <code>n</code> is the total number of words in the dataset, and <code>m</code> is the length of the requested prefix. If you have 1 million words, you have to check all 1 million words every single time the user types a keystroke.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              Advanced Approach (Tries)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <p className="text-xs">
+              For massive scale applications, checking every word via Linear Scan is catastrophically slow. Instead, modern systems organize data into complex structures ahead of time.
+            </p>
+
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">The Solution:</h4>
+                <p className="text-xs">
+                  Systems use a <strong>Trie (Prefix Tree)</strong>. A Trie pre-processes strings into a character tree. When a user types "app", the system simply walks down the 'a' → 'p' → 'p' branch, and instantly retrieves all words below that node.
+                </p>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <h4 className="font-semibold text-green-600 dark:text-green-400 mb-1 text-[11px] uppercase tracking-wider">Complexity: O(m)</h4>
+                <p className="text-[10px] leading-tight mt-1 text-muted-foreground">
+                  Searching depends <em>only</em> on <code>m</code> (the length of the prefix). Whether your dictionary has 10 words or 10 billion words, finding words that start with "app" takes exactly 3 character checks.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-4 bg-primary/10 border border-primary/20 p-4 rounded-lg flex items-center justify-between">
+        <p className="text-sm font-medium text-primary">Curious how the advanced O(m) method works?</p>
+        <a href="/visualizers/trie" target="_blank" rel="noopener noreferrer">
+          <Button variant="outline" size="sm" className="gap-2">
+            View Trie Visualizer
+          </Button>
+        </a>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Prefix Search Visualizer"
@@ -146,6 +241,7 @@ export default function PrefixSearchVisualizerPage() {
         time: "O(n × m)",
         space: "O(k)",
       }}
+      concepts={PrefixSearchConcepts}
     >
       <div className="w-full space-y-8">
         {/* Top Controls: Add, Bulk Import, Search */}
@@ -245,10 +341,9 @@ export default function PrefixSearchVisualizerPage() {
                   className={`
                     w-32 h-28 md:w-36 md:h-32 border-2 rounded-xl flex items-center justify-center
                     transition-all duration-300 shadow-sm text-center p-3
-                    ${
-                      wordObj.isMatch
-                        ? "bg-blue-100 border-blue-500 text-blue-900 font-bold shadow-md scale-[1.03]"
-                        : "bg-background border-border text-foreground hover:border-primary/50"
+                    ${wordObj.isMatch
+                      ? "bg-blue-100 border-blue-500 text-blue-900 font-bold shadow-md scale-[1.03]"
+                      : "bg-background border-border text-foreground hover:border-primary/50"
                     }
                   `}
                 >

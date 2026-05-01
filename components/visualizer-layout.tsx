@@ -25,6 +25,7 @@ import {
 import type { ReactNode } from "react";
 import Header from "../components/header";
 import { FaGithub } from "react-icons/fa";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
 
 interface VisualizerLayoutProps {
@@ -49,6 +50,8 @@ interface VisualizerLayoutProps {
     description: string;
     examples: string[];
   }>;
+  concepts?: ReactNode;
+  defaultTab?: "visualize" | "concepts";
 }
 
 export function VisualizerLayout({
@@ -66,6 +69,8 @@ export function VisualizerLayout({
   totalSteps = 0,
   complexity,
   applications = [],
+  concepts,
+  defaultTab = "visualize",
 }: VisualizerLayoutProps) {
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -146,104 +151,123 @@ export function VisualizerLayout({
         <div className="grid lg:grid-cols-4 gap-6 ">
           {/* Main Visualization Area */}
           <div className="lg:col-span-3 ">
-            {/* Enhanced Visualization Card */}
-            <Card className="mb-6 shadow-lg bg-[#C2C9FF] backdrop-blur-sm border-2 border-primary rounded">
-              <CardContent className="p-0 ">
-                {/* Progress Bar — only show if steps exist AND algorithm controls are active */}
-                {hasAlgorithmControls && totalSteps > 0 && (
-                  <div className="px-6 pt-6 pb-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">
-                        Progress
-                      </span>
-                      <span className="text-sm font-mono text-foreground">
-                        {currentStep}/{totalSteps}
-                      </span>
-                    </div>
-                    <Progress value={progressPercentage} className="h-2" />
-                  </div>
-                )}
+            <Tabs defaultValue={defaultTab} className="w-full">
+              {concepts && (
+                <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-6">
+                  <TabsTrigger value="visualize" className="text-sm font-semibold">Visualization</TabsTrigger>
+                  <TabsTrigger value="concepts" className="text-sm font-semibold">Learn Concepts</TabsTrigger>
+                </TabsList>
+              )}
 
-                {/* Visualization Canvas */}
-                <div className="py-2">
-                  <div className=" rounded p-6 min-h-[400px] flex items-center justify-center ">
-                    {children}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* ✅ Conditionally render Algorithm Controls */}
-            {hasAlgorithmControls && (
-              <Card className="shadow-lg bg-card backdrop-blur-sm border-2 border-primary rounded">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Play className="h-5 w-5 text-blue-600" />
-                    Algorithm Controls
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-center gap-3 mb-6">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onStepBack}
-                      disabled={currentStep === 0}
-                      className="hover:bg-blue-50 disabled:opacity-50  border-2 border-primary bg-transparent"
-                    >
-                      <SkipBack className="h-4 w-4" />
-                    </Button>
-                    {isPlaying ? (
-                      <Button
-                        onClick={onPause}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 shadow-md"
-                      >
-                        <Pause className="h-4 w-4 mr-2" />
-                        Pause
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={onPlay}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 shadow-md"
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        Play
-                      </Button>
+              <TabsContent value="visualize" className="mt-0 space-y-6">
+                {/* Enhanced Visualization Card */}
+                <Card className="shadow-lg bg-[#C2C9FF] backdrop-blur-sm border-2 border-primary rounded">
+                  <CardContent className="p-0 ">
+                    {/* Progress Bar — only show if steps exist AND algorithm controls are active */}
+                    {hasAlgorithmControls && totalSteps > 0 && (
+                      <div className="px-6 pt-6 pb-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-foreground">
+                            Progress
+                          </span>
+                          <span className="text-sm font-mono text-foreground">
+                            {currentStep}/{totalSteps}
+                          </span>
+                        </div>
+                        <Progress value={progressPercentage} className="h-2" />
+                      </div>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onStepForward}
-                      disabled={currentStep >= totalSteps}
-                      className="hover:bg-blue-50 border-2 border-primary disabled:opacity-50"
-                    >
-                      <SkipForward className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onReset}
-                      className="hover:bg-red-50 hover:border-red-200 border-2 border-primary hover:text-red-600 bg-transparent"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  </div>
 
-                  {/* Status Indicator */}
-                  <div className="text-center">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-sm border-border border">
-                      <div
-                        className={`w-2 h-2 rounded-full ${isPlaying
-                          ? "bg-green-500 animate-pulse"
-                          : "bg-gray-400"
-                          }`}
-                      ></div>
-                      {isPlaying ? "Running" : "Paused"}
+                    {/* Visualization Canvas */}
+                    <div className="py-2">
+                      <div className=" rounded p-6 min-h-[400px] flex items-center justify-center ">
+                        {children}
+                      </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* ✅ Conditionally render Algorithm Controls */}
+                {hasAlgorithmControls && (
+                  <Card className="shadow-lg bg-card backdrop-blur-sm border-2 border-primary rounded">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Play className="h-5 w-5 text-blue-600" />
+                        Algorithm Controls
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-center gap-3 mb-6">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onStepBack}
+                          disabled={currentStep === 0}
+                          className="hover:bg-blue-50 disabled:opacity-50  border-2 border-primary bg-transparent"
+                        >
+                          <SkipBack className="h-4 w-4" />
+                        </Button>
+                        {isPlaying ? (
+                          <Button
+                            onClick={onPause}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 shadow-md"
+                          >
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pause
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={onPlay}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 shadow-md"
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Play
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onStepForward}
+                          disabled={currentStep >= totalSteps}
+                          className="hover:bg-blue-50 border-2 border-primary disabled:opacity-50"
+                        >
+                          <SkipForward className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onReset}
+                          className="hover:bg-red-50 hover:border-red-200 border-2 border-primary hover:text-red-600 bg-transparent"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Status Indicator */}
+                      <div className="text-center">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-sm border-border border">
+                          <div
+                            className={`w-2 h-2 rounded-full ${isPlaying
+                              ? "bg-green-500 animate-pulse"
+                              : "bg-gray-400"
+                              }`}
+                          ></div>
+                          {isPlaying ? "Running" : "Paused"}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {concepts && (
+                <TabsContent value="concepts" className="mt-0">
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {concepts}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </TabsContent>
+              )}
+            </Tabs>
           </div>
 
           {/* Enhanced Sidebar */}

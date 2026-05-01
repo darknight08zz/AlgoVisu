@@ -5,8 +5,10 @@ import { VisualizerLayout } from "../../../components/visualizer-layout"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
+import { Plus, Trash2, ChevronRight, Repeat, ArrowLeftRight, ArrowLeft, Volume2, VolumeX } from "lucide-react"
 import { Badge } from "../../../components/ui/badge"
-import { Plus, Trash2, ChevronRight, Repeat, ArrowLeftRight, ArrowLeft } from "lucide-react"
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 
 interface NodeItem {
   value: string | number
@@ -207,6 +209,8 @@ export default function LinkedListVisualizerPage() {
   )
   const [currentCodeLine, setCurrentCodeLine] = useState<number>(-1)
 
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
+
   // Operation explainer (micro-lesson)
   const [opHint, setOpHint] = useState<{ title: string; points: string[] } | null>(null)
 
@@ -242,6 +246,7 @@ export default function LinkedListVisualizerPage() {
     setTraversalIndex(null)
     setTraversalDone(false)
     setOpHint(null)
+    stop()
   }
 
   // --- Pseudocode Step Helpers ---
@@ -271,6 +276,7 @@ export default function LinkedListVisualizerPage() {
 
     setNodes(prev => buildPointers([...prev, { value: newValue, isHighlighted: true }], listType))
     setOperations(prev => [...prev, `Appended ${newValue}`])
+    announce(`Appended ${newValue}`)
     setInputValue("")
     setTraversalDone(false)
 
@@ -299,6 +305,7 @@ export default function LinkedListVisualizerPage() {
 
     setNodes(prev => buildPointers([{ value: newValue, isHighlighted: true }, ...prev], listType))
     setOperations(prev => [...prev, `Prepended ${newValue}`])
+    announce(`Prepended ${newValue}`)
     setInputValue("")
     setTraversalDone(false)
 
@@ -338,6 +345,7 @@ export default function LinkedListVisualizerPage() {
     setNodes(prev => prev.map((n, i) => (i === index ? { ...n, isRemoved: true } : n)))
     const node = nodes[index]
     setOperations(prev => [...prev, `Removed ${node?.value}`])
+    announce(`Removed ${node?.value}`)
 
     setOpHint({
       title: "Delete at index i: O(n)",
@@ -362,6 +370,7 @@ export default function LinkedListVisualizerPage() {
     if (direction === "forward") {
       setTraversalIndex(headIndex)
       setOperations(prev => [...prev, `Started forward traversal`])
+      announce("Started forward traversal")
       setCurrentPseudocode(pseudocodeDefinitions.traverseForward)
       setCurrentCodeLine(1)
       setOpHint({
@@ -375,6 +384,7 @@ export default function LinkedListVisualizerPage() {
     } else {
       setTraversalIndex(tailIndex)
       setOperations(prev => [...prev, `Started backward traversal`])
+      announce("Started backward traversal")
       setCurrentPseudocode(pseudocodeDefinitions.traverseBackward)
       setCurrentCodeLine(1)
       setOpHint({
@@ -394,6 +404,7 @@ export default function LinkedListVisualizerPage() {
     if (traversalIndex === null) return
     setNodes(prev => prev.map((n, i) => (i === traversalIndex ? { ...n, isTraversed: true } : n)))
     const current = getNodeByIndex(traversalIndex)
+    if (current) announce(`Visiting node ${current.value}`)
     let nextIndex: number | null | undefined
     if (traversalDirection === "forward") {
       nextIndex = current?.nextId
@@ -509,6 +520,119 @@ export default function LinkedListVisualizerPage() {
 
   const t = typeDetails[listType]
 
+  const LinkedListConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            Understanding Linked Lists
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm md:text-base text-muted-foreground">
+          <p>
+            Unlike arrays which store elements in contiguous memory, a <strong>Linked List</strong> stores elements in discrete nodes scattered across memory. Each node contains its data and a <em>pointer</em> (or reference) to the next node in the sequence.
+          </p>
+          <ul className="list-disc list-inside space-y-2 pl-2">
+            {linkedListIntro.bullets.map((b, i) => (
+              <li key={i}>{b}</li>
+            ))}
+          </ul>
+          <div className="rounded-md bg-gray-900 border border-border p-4 overflow-x-auto text-gray-100 shadow-inner mt-4">
+            <div className="font-mono text-xs md:text-sm leading-6 whitespace-pre">
+              {linkedListIntro.diagram.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="njTh_OwMCEs" title="Data Structures: Linked Lists (HackerRank)" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {(Object.entries(typeDetails) as [ListType, typeof typeDetails[ListType]][]).map(([key, info]) => (
+          <Card key={key} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                {key === "singly" && <ChevronRight className="w-5 h-5 text-primary" />}
+                {key === "doubly" && <ArrowLeftRight className="w-5 h-5 text-primary" />}
+                {key === "circular" && <Repeat className="w-5 h-5 text-primary" />}
+                {info.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+              <div>
+                <p className="font-medium text-foreground mb-3">{info.description}</p>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Mechanics:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground select-none">
+                      {info.howItWorks.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg">
+                    <div>
+                      <h4 className="font-semibold text-green-600 dark:text-green-400 mb-1">Advantages</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-xs">
+                        {info.pros.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-red-600 dark:text-red-400 mb-1">Trade-offs</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-xs">
+                        {info.cons.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="rounded-md bg-gray-900 border border-border p-3 overflow-x-auto text-gray-100 mb-4 shadow-sm">
+                  <div className="font-mono text-[10px] md:text-xs leading-5 whitespace-pre">
+                    {info.diagram.map((line, i) => (
+                      <div key={i}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+
+                <h4 className="font-semibold text-foreground mb-2 text-xs uppercase tracking-wider">Complexity Profile</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex justify-between items-center bg-muted/50 p-2 rounded">
+                    <span className="font-medium">Prepend</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.prepend}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center bg-muted/50 p-2 rounded">
+                    <span className="font-medium">Append</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.append}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center bg-muted/50 p-2 rounded">
+                    <span className="font-medium">Delete (at index)</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.deleteAtI}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center bg-muted/50 p-2 rounded">
+                    <span className="font-medium">Traverse</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.traverse}</Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mt-6 bg-muted/20 border-l-4 border-blue-500 p-4 rounded-r-lg">
+        <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">Memory Overhead & Safety</h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          While Linked Lists excel at <code>O(1)</code> insertions without needing large contiguous blocks of memory, they inherently suffer from <strong>cache locality issues</strong> because adjacent nodes might be far apart in actual hardware memory. Furthermore, doubling the pointers (as seen in Doubly Linked Lists) increases the memory overhead per node. Implementers must also be extremely careful with pointer management to avoid memory leaks or "orphan nodes" that remain inaccessible.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Linked List Visualizer"
@@ -524,112 +648,39 @@ export default function LinkedListVisualizerPage() {
       totalSteps={Math.max(operations.length, nodes.length)}
       complexity={{ time: "O(n)", space: "O(n)" }}
       applications={applications}
+      concepts={LinkedListConcepts}
     >
       <div className="w-full space-y-6">
-        {/* ===== Knowledge: Linked Lists (Global) ===== */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📚 Understanding Linked Lists</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <ul className="list-disc list-inside space-y-1">
-              {linkedListIntro.bullets.map((b, i) => (
-                <li key={i}>{b}</li>
-              ))}
-            </ul>
-            <div className="rounded-md bg-muted/40 p-3 overflow-x-auto">
-              <div className="font-mono text-xs leading-5">
-                {linkedListIntro.diagram.map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* List type selection */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="font-semibold">List Type:</span>
-          {listTypeOptions.map(opt => (
-            <Button
-              key={opt.value}
-              variant={listType === opt.value ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setListType(opt.value as ListType)}
-              className="flex items-center gap-1"
-            >
-              {opt.icon}
-              {opt.label}
-            </Button>
-          ))}
+        <div className="flex flex-wrap gap-4 items-center justify-between mb-6 mt-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="font-semibold">List Type:</span>
+            {listTypeOptions.map(opt => (
+              <Button
+                key={opt.value}
+                variant={listType === opt.value ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setListType(opt.value as ListType)}
+                className="flex items-center gap-1"
+              >
+                {opt.icon}
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAudio}
+            title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+            className={`flex items-center gap-2 ${isAudioEnabled ? 'bg-green-100/50 text-green-600 border-green-200 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+          >
+            {isAudioEnabled ? <><Volume2 className="h-4 w-4" /> Audio On</> : <><VolumeX className="h-4 w-4" /> Audio Off</>}
+          </Button>
         </div>
 
-        {/* ===== Knowledge: Current Type ===== */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <div>{t.description}</div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">How it works</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {t.howItWorks.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <div className="font-semibold text-foreground mb-1">Typical use cases</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {t.useCases.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">Pros</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {t.pros.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">Cons</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {t.cons.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="rounded-md bg-muted/40 p-3 overflow-x-auto">
-              <div className="font-mono text-xs leading-5">
-                {t.diagram.map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <Badge variant="outline">Prepend: {t.complexity.prepend}</Badge>
-              <Badge variant="outline">Append: {t.complexity.append}</Badge>
-              <Badge variant="outline">Delete@i: {t.complexity.deleteAtI}</Badge>
-              <Badge variant="outline">Traverse: {t.complexity.traverse}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Operation Complexity Strip */}
-        <div className="flex flex-wrap gap-2 text-[11px]">
+        <div className="flex flex-wrap gap-2 text-[11px] mb-4">
           <Badge variant="outline">
             Append: {t.complexity.append}
           </Badge>

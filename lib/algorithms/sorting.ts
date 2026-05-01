@@ -18,6 +18,7 @@ export interface SortStep {
   swapping?: number[]
   pivot?: number
   codeLine?: number
+  callStack?: { left: number; right: number }[]
 }
 
 // Helper to deep copy the array of objects to avoid reference issues in snapshots
@@ -180,46 +181,49 @@ export const quickSort = (arr: SortElement[]): SortStep[] => {
   const steps: SortStep[] = []
   const array = copy(arr)
   let comparisons = 0, swaps = 0
+  const activeStack: { left: number, right: number }[] = []
 
   const qs = (l: number, h: number, d = 0) => {
     if (l < h) {
+      activeStack.push({ left: l, right: h })
       const p = part(l, h)
       array[p].isSorted = true
-      steps.push({ array: copy(array), description: `Pivot ${array[p].value} is now in its final position`, comparisons, swaps, pivot: p, codeLine: 2 })
+      steps.push({ array: copy(array), description: `Pivot ${array[p].value} is now in its final position`, comparisons, swaps, pivot: p, codeLine: 2, callStack: [...activeStack] })
       qs(l, p - 1, d + 1); qs(p + 1, h, d + 1)
+      activeStack.pop()
     }
   }
 
   const part = (l: number, h: number) => {
     const pivot = array[h]; let i = l - 1
     const pv = copy(array); pv[h].isPivot = true
-    steps.push({ array: pv, description: `Selecting pivot: ${pivot.value} at index ${h}`, comparisons, swaps, pivot: h, codeLine: 7 })
+    steps.push({ array: pv, description: `Selecting pivot: ${pivot.value} at index ${h}`, comparisons, swaps, pivot: h, codeLine: 7, callStack: [...activeStack] })
 
     for (let j = l; j < h; j++) {
       comparisons++
       const cmp = copy(array); cmp[j].isComparing = true; cmp[h].isPivot = true
-      steps.push({ array: cmp, description: `Comparing ${array[j].value} with pivot ${pivot.value}`, comparisons, swaps, comparing: [j], pivot: h, codeLine: 9 })
+      steps.push({ array: cmp, description: `Comparing ${array[j].value} with pivot ${pivot.value}`, comparisons, swaps, comparing: [j], pivot: h, codeLine: 9, callStack: [...activeStack] })
 
       if (array[j].value <= pivot.value) {
         i++;
         if (i !== j) {
           [array[i], array[j]] = [array[j], array[i]]; swaps++
           const sw = copy(array); sw[i].isSwapping = true; sw[j].isSwapping = true; sw[h].isPivot = true
-          steps.push({ array: sw, description: `Swapped ${array[i].value} and ${array[j].value}`, comparisons, swaps, swapping: [i, j], pivot: h, codeLine: 12 })
+          steps.push({ array: sw, description: `Swapped ${array[i].value} and ${array[j].value}`, comparisons, swaps, swapping: [i, j], pivot: h, codeLine: 12, callStack: [...activeStack] })
         }
       }
     }
 
     ;[array[i + 1], array[h]] = [array[h], array[i + 1]]; swaps++
     const fs = copy(array); fs[i + 1].isSwapping = true; fs[h].isSwapping = true
-    steps.push({ array: fs, description: `Placed pivot ${pivot.value} at its final position ${i + 1}`, comparisons, swaps, swapping: [i + 1, h], codeLine: 13 })
+    steps.push({ array: fs, description: `Placed pivot ${pivot.value} at its final position ${i + 1}`, comparisons, swaps, swapping: [i + 1, h], codeLine: 13, callStack: [...activeStack] })
 
     return i + 1
   }
 
   qs(0, array.length - 1)
   array.forEach(e => (e.isSorted = true))
-  steps.push({ array: copy(array), description: "Sorting complete!", comparisons, swaps, codeLine: -1 })
+  steps.push({ array: copy(array), description: "Sorting complete!", comparisons, swaps, codeLine: -1, callStack: [] })
 
   return steps
 }

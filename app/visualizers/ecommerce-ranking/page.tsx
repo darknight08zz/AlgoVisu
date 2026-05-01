@@ -496,6 +496,76 @@ export default function EcommerceRankingPage() {
     }
   }, [algorithm, order])
 
+  const EcommerceConcepts = (
+    <div className="space-y-8">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            E-Commerce Ranking Pipeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            This visualizer mirrors a simplified <strong>ranking pipeline</strong> like the one behind most e-commerce homepages and category pages. Ranking dictates the exact order in which products are shown to users.
+          </p>
+          <p>
+            Why this matters: Ranking directly affects <em>discoverability, revenue, and user experience</em>. Product teams constantly iterate on ranking signals, tie-breaking logic, and constraints (e.g., “promote new arrivals” or "boost high-margin items").
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Ranking Signals
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <p className="text-xs">A "signal" is a data point used to evaluate and order products. Common examples include:</p>
+
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Common Signals</h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs">
+                  <li><strong>Price:</strong> Sorting from low to high or high to low.</li>
+                  <li><strong>Newest:</strong> Prioritizing recently added inventory.</li>
+                  <li><strong>Popularity:</strong> Often a composite score based on sales, views, or ratings.</li>
+                </ul>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Deterministic Ties</h4>
+                <p className="text-xs">When two products have the same signal score, a secondary signal (like name or ID) is used as a tie-breaker. This ensures the feed layout is physically stable across page reloads.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Visualizer Mechanics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2 text-xs">
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Algorithms:</strong> Select from underlying sorting algorithms (Quick, Merge, Heap, etc.) to see how the system achieves the final ranking state.</li>
+                <li><strong>Synthetic Catalog:</strong> Products are generated with random prices, ages (up to ~60 days), and popularity scores.</li>
+                <li><strong>Transparency:</strong> The UI tracks comparisons and swaps in real-time, showing which products are currently being evaluated against each other.</li>
+              </ul>
+            </div>
+
+            <div className="bg-muted/30 p-2 rounded mt-auto flex items-center justify-between">
+              <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Complexity / Output:</span>
+              <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(N log N)</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
   return (
     <VisualizerLayout
       title="E-commerce Ranking Visualizer"
@@ -504,47 +574,9 @@ export default function EcommerceRankingPage() {
       currentStep={stepIndex}
       totalSteps={steps.length}
       complexity={{ time: "varies", space: "varies" }}
+      concepts={EcommerceConcepts}
     >
       <div className="space-y-6">
-
-        {/* What this project is */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Info className="h-4 w-4" /> About this project
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-black space-y-2">
-            <p>
-              This app mirrors a simplified <strong>ranking pipeline</strong> like the one behind most e-commerce homepages and category pages.
-              You pick a ranking signal, and the UI shows how the feed reshuffles over time.
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Signals</strong> you can rank by: <em>Price</em>, <em>Newest</em>, <em>Popularity</em>.</li>
-              <li><strong>Deterministic ties</strong> make the feed stable: ties fall back to product name and catalog id.</li>
-              <li><strong>Transparency</strong>: the progress bar on each card and colored rings show comparisons, swaps, pivots, and “fixed” positions.</li>
-            </ul>
-            <p className="rounded-md border bg-muted/30 p-3">
-              Why this matters: ranking affects <em>discoverability, revenue, and user experience</em>. Product teams iterate on signals,
-              tie-breaks, and constraints (e.g., “keep prices balanced” or “promote new arrivals”)—this tool makes those changes visible.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Dataset notes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Dataset & UI at a glance</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-black space-y-2">
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Synthetic catalog</strong>: products are generated with random price, age (up to ~60 days), and popularity.</li>
-              <li><strong>Badges</strong> show raw values; the bar beneath reflects the current ranking signal.</li>
-              <li><strong>Metrics</strong> (top-right) summarize total comparisons, swaps, and the current step.</li>
-              <li><strong>Unique keys</strong> are enforced via an <code>instanceId</code> per item (plus index) to prevent React key collisions during animations.</li>
-            </ul>
-          </CardContent>
-        </Card>
 
         {/* Settings */}
         <Card>

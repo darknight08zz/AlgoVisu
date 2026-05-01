@@ -6,7 +6,9 @@ import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
 import { Slider } from "../../../components/ui/slider"
-import { Shuffle, BarChart3, TrendingUp, Clock, Code, Layers, Eye } from "lucide-react"
+import { Shuffle, BarChart3, TrendingUp, Clock, Code, Layers, Eye, Volume2, VolumeX } from "lucide-react"
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 import {
   bubbleSort,
   selectionSort,
@@ -207,6 +209,7 @@ export default function SortingVisualizerPage() {
   const [comparisons, setComparisons] = useState(0)
   const [swaps, setSwaps] = useState(0)
   const [highContrast, setHighContrast] = useState(false)
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
 
   const applications = [
     { title: "Database Query Optimization", description: "Sorting algorithms optimize database queries and indexing for faster data retrieval", examples: ["ORDER BY", "Index creation", "Query plans"] },
@@ -229,7 +232,8 @@ export default function SortingVisualizerPage() {
     setSwaps(0)
     setIsSorting(false)
     setIsPlaying(false)
-  }, [arraySize])
+    stop()
+  }, [arraySize, stop])
 
   useEffect(() => { generateRandomArray() }, [generateRandomArray])
 
@@ -257,6 +261,9 @@ export default function SortingVisualizerPage() {
       const next = currentStep + 1
       setCurrentStep(next)
       setArray(sortSteps[next].array)
+      if (sortSteps[next].description) {
+        announce(sortSteps[next].description)
+      }
     }
   }
 
@@ -273,6 +280,7 @@ export default function SortingVisualizerPage() {
   const reset = () => {
     setArray([...originalArray]); setSortSteps([]); setCurrentStep(0)
     setComparisons(0); setSwaps(0); setIsSorting(false); setIsPlaying(false)
+    stop()
   }
 
   // Auto-advance while playing
@@ -320,7 +328,76 @@ export default function SortingVisualizerPage() {
     setAlgorithm(alg)
     setSortSteps([]); setCurrentStep(0); setComparisons(0); setSwaps(0)
     setIsSorting(false); setIsPlaying(false); setArray([...originalArray])
+    stop()
   }
+
+  const SortingConcepts = (
+    <div className="space-y-8">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is Sorting?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm md:text-base text-muted-foreground">
+          <p>
+            <strong>Sorting</strong> is the process of arranging data in a specific meaningful order, typically ascending or descending. It is a fundamental operation in computer science because it dramatically optimizes other operations, like searching (e.g., Binary Search) and data analysis.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Concepts:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Time Complexity:</strong> How the execution time grows as the data size (n) grows. It ranges from <code>O(n²)</code> (slower) to <code>O(n log n)</code> (faster for general sorting).</li>
+              <li><strong>Space Complexity:</strong> How much extra memory the algorithm needs. <code>O(1)</code> means it primarily sorts in-place. <code>O(n)</code> means it needs extra arrays.</li>
+              <li><strong>Stability:</strong> A <em>stable</em> sort preserves the relative order of elements with equal keys. If you sort logs first by date, then by severity, a stable sort keeps logs of the same severity ordered by date.</li>
+              <li><strong>In-Place:</strong> Sorter does not need extra memory proportional to the input size.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="pkkFqlG0Hds" title="Algorithms: Sorting (HackerRank)" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {(Object.entries(algorithmInfo) as [SortingAlgorithm, typeof algorithmInfo[SortingAlgorithm]][]).map(([key, info]) => (
+          <Card key={key} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-foreground">
+                {info.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-xs flex-1 flex flex-col justify-between">
+              <p className="font-medium text-foreground text-sm">{info.description}</p>
+
+              <div className="space-y-3 mt-2 flex-1">
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">How It Works:</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    {info.howItWorks.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Best For:</h4>
+                  <p className="text-xs text-muted-foreground">{info.bestFor}</p>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-2 rounded flex flex-col mt-auto">
+                <h4 className="font-semibold text-foreground mb-2 text-[11px] uppercase tracking-wider">Algorithm Details</h4>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <Badge variant="outline" className="flex justify-center font-mono bg-muted/50 border-primary/20">Time: {info.timeComplexity}</Badge>
+                  <Badge variant="outline" className="flex justify-center font-mono bg-muted/50 border-primary/20">Space: {info.spaceComplexity}</Badge>
+                  <Badge variant={info.stable === "Yes" ? "default" : "secondary"} className="flex justify-center">Stable: {info.stable}</Badge>
+                  <Badge variant={info.inPlace === "Yes" ? "default" : "secondary"} className="flex justify-center">In-Place: {info.inPlace}</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <VisualizerLayout
@@ -337,30 +414,18 @@ export default function SortingVisualizerPage() {
       totalSteps={sortSteps.length}
       complexity={{ time: currentAlgorithm.timeComplexity, space: currentAlgorithm.spaceComplexity }}
       applications={applications}
+      concepts={SortingConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Understanding Sorting */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📚 Understanding Sorting</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <div><strong>Sorting</strong> reorders data to a defined order. It’s key for fast lookup, grouping, and analytics. Algorithms trade off speed, space, stability, and in-place behavior.</div>
-            <div className="rounded-md border bg-muted/30 p-3 font-mono text-xs text-foreground">
-              Input: [7, 3, 8, 2] → Sorted: [2, 3, 7, 8]<br />
-              Stable sort keeps equal keys in original order.
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Algorithm Selector (button group) */}
-        <div className="flex justify-center">
-          <div className="inline-flex rounded-md border p-1 bg-muted w-full max-w-2xl">
+        <div className="flex justify-center mb-6 mt-4">
+          <div className="inline-flex rounded-md border p-1 bg-muted w-full max-w-2xl overflow-x-auto whitespace-nowrap scrollbar-hide">
             {(["bubble", "selection", "insertion", "merge", "quick", "heap"] as const).map((alg) => (
               <button
                 key={alg}
                 onClick={() => onChooseAlgorithm(alg)}
-                className={`flex-1 py-2 text-sm font-medium rounded-sm transition-colors ${algorithm === alg ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-sm transition-colors ${algorithm === alg ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 {algorithmInfo[alg].name}
@@ -368,39 +433,6 @@ export default function SortingVisualizerPage() {
             ))}
           </div>
         </div>
-
-        {/* Algorithm Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{currentAlgorithm.name} — Details</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <div className="font-medium text-foreground">{currentAlgorithm.description}</div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1"><Clock className="h-4 w-4 text-accent" /><span className="text-sm font-medium">Time</span></div>
-                <Badge variant="outline" className="font-mono">{currentAlgorithm.timeComplexity}</Badge>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1"><BarChart3 className="h-4 w-4 text-accent" /><span className="text-sm font-medium">Space</span></div>
-                <Badge variant="outline" className="font-mono">{currentAlgorithm.spaceComplexity}</Badge>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1"><Layers className="h-4 w-4 text-accent" /><span className="text-sm font-medium">Stable</span></div>
-                <Badge variant="outline">{currentAlgorithm.stable}</Badge>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1"><Layers className="h-4 w-4 text-accent" /><span className="text-sm font-medium">In-Place</span></div>
-                <Badge variant="outline">{currentAlgorithm.inPlace}</Badge>
-              </div>
-            </div>
-            <div>
-              <div className="font-semibold text-foreground mb-1">How It Works</div>
-              <ul className="list-disc list-inside space-y-1 text-xs">{algorithmInfo[algorithm].howItWorks.map((it, i) => <li key={i}>{it}</li>)}</ul>
-            </div>
-            <div className="text-xs"><strong>Best For:</strong> {currentAlgorithm.bestFor}</div>
-          </CardContent>
-        </Card>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -561,10 +593,42 @@ export default function SortingVisualizerPage() {
         {/* Current Step */}
         {sortSteps.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-lg">Current Step</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg mt-1">Current Step</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleAudio}
+                title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+                className={`h-8 w-8 p-0 rounded-full ${isAudioEnabled ? 'bg-green-100/50 text-green-600 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                {isAudioEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                <span className="sr-only">Toggle Audio</span>
+              </Button>
+            </CardHeader>
             <CardContent>
               <div className="text-sm p-3 bg-accent/10 rounded-lg border border-accent/20">
                 {sortSteps[currentStep]?.description || "Ready to start sorting"}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Call Stack (Quick Sort Only) */}
+        {algorithm === "quick" && sortSteps.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Recursive Call Stack</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2 min-h-[40px] items-end bg-muted/30 p-2 rounded-md border">
+                {(!sortSteps[currentStep]?.callStack || sortSteps[currentStep].callStack!.length === 0) ? (
+                  <span className="text-muted-foreground text-sm italic">Empty</span>
+                ) : (
+                  sortSteps[currentStep].callStack!.map((frame, i) => (
+                    <div key={i} className={`px-2 py-1 text-xs md:text-sm border rounded-md font-mono ${i === sortSteps[currentStep].callStack!.length - 1 ? 'bg-purple-200 text-purple-900 border-purple-400 font-bold -translate-y-1 transition-transform' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                      qs({frame.left}, {frame.right})
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

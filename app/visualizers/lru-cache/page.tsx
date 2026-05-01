@@ -122,6 +122,80 @@ export default function LRUCacheApplication() {
         setValueInput("")
     }
 
+    const LRUConcepts = (
+        <div className="space-y-8">
+            <Card className="bg-card shadow-md border border-border rounded-2xl">
+                <CardHeader>
+                    <CardTitle className="text-xl font-bold text-foreground">
+                        How LRU Caching Works
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+                    <p>
+                        An <strong>LRU (Least Recently Used)</strong> cache stores frequently accessed data in limited memory for fast retrieval. When it reaches capacity and a new item arrives, it must evict the <strong>least recently used</strong> item to make room.
+                    </p>
+                    <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+                        <h4 className="font-semibold text-foreground text-sm">The <code>O(1)</code> Secret Sauce:</h4>
+                        <p className="text-sm">To achieve true <code>O(1)</code> time complexity for both reading and writing, an LRU cache combines two distinct data structures:</p>
+                        <ul className="list-disc pl-5 space-y-1 text-sm mt-2">
+                            <li><strong>Doubly Linked List:</strong> Maintains the <em>access order</em>. The Head is the "Most Recently Used" (MRU), and the Tail is the "Least Recently Used" (LRU). A doubly linked list allows removing a node from the middle and moving it to the head in <code>O(1)</code> time, provided you have a direct reference to it.</li>
+                            <li><strong>Hash Map:</strong> Stores the cache keys pointing directly to the corresponding linked list nodes. This provides the <code>O(1)</code> direct reference needed to bypass linear search.</li>
+                        </ul>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                            Cache Operations
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+                        <div className="space-y-3 mt-2">
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">get(key)</h4>
+                                <p className="text-xs">Looks up the key in the Hash Map. If found, takes the Node, unlinks it from its current position in the Linked List, and moves it to the Head (MRU). Finally, returns the value.</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">put(key, value)</h4>
+                                <p className="text-xs">If the key exists, updates its value and moves its Node to the Head. If it's a new key, creates a Node, adds it to the Hash Map, and inserts it at the Head.</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Eviction</h4>
+                                <p className="text-xs">If <code>put()</code> pushes the cache over capacity, the algorithm identifies the Tail node (LRU), removes it from the Linked List, deletes its key from the Hash Map, and then performs the insert.</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+                            <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Complexity for all ops:</span>
+                            <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(1)</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                            Real-World Use Cases
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+                        <div className="space-y-3 mt-2 text-xs">
+                            <ul className="list-disc pl-5 space-y-2">
+                                <li><strong>Database & Key-Value Stores:</strong> Redis and Memcached use LRU under the hood to ensure the most heavily requested queries stay in lightning-fast RAM while older queries fall back to disk.</li>
+                                <li><strong>Web Browsers:</strong> Storing recent images, scripts, and API responses so hitting the "Back" button doesn't trigger a full re-download.</li>
+                                <li><strong>Operating Systems:</strong> Page replacement algorithms in virtual memory management heavily rely on LRU (or approximate LRU) to decide which memory pages to swap to the hard drive.</li>
+                                <li><strong>CPU Architectures:</strong> L1, L2, and L3 hardware caches use LRU logic to manage the extremely limited, ultra-fast cache lines sitting next to processor cores.</li>
+                            </ul>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    )
+
     return (
         <VisualizerLayout
             title="LRU Cache Simulator"
@@ -132,41 +206,10 @@ export default function LRUCacheApplication() {
                 space: "O(capacity)",
             }}
             applications={[]}
+            concepts={LRUConcepts}
         >
 
             <div className="w-full space-y-6">
-                {/* Explanation Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-yellow-600" />
-                            How LRU Caching Works
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-black">
-                        <p>
-                            An LRU (Least Recently Used) cache stores frequently accessed data for fast retrieval.
-                            When full, it removes the <strong>least recently used</strong> item.
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                            <li>
-                                <strong>Doubly linked list</strong> maintains access order: head = most recent, tail = least recent.
-                            </li>
-                            <li>
-                                <strong>Hash map</strong> (not shown) provides O(1) key lookup — points to nodes in the list.
-                            </li>
-                            <li>
-                                On <code>get(key)</code> or <code>put(key)</code>, the node moves to the <strong>head</strong>.
-                            </li>
-                            <li>
-                                On <code>put()</code> when full, the <strong>tail</strong> is evicted instantly (O(1)).
-                            </li>
-                        </ul>
-                        <p>
-                            Used in Redis, CPU caches, web browsers, and database buffer pools for high-speed data access.
-                        </p>
-                    </CardContent>
-                </Card>
 
                 {/* Interactive Implementation */}
                 <Card>

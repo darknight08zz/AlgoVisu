@@ -5,6 +5,7 @@ import { VisualizerLayout } from "../../../components/visualizer-layout"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
+import { Badge } from "../../../components/ui/badge"
 import { Label } from "../../../components/ui/label"
 import { Shuffle, Play, Pause } from "lucide-react"
 
@@ -166,6 +167,92 @@ export default function MSTClusteringPage() {
         ? Math.max(...Object.values(clusters)) + 1
         : 1
 
+    const MSTClusteringConcepts = (
+        <div className="space-y-6">
+            <Card className="bg-card shadow-md border border-border rounded-2xl">
+                <CardHeader>
+                    <CardTitle className="text-xl font-bold text-foreground">
+                        Clustering using Minimum Spanning Trees
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+                    <p>
+                        An incredibly elegant application of the <strong>Minimum Spanning Tree</strong> is grouping data points together (Clustering). It leverages a core mathematical property of MSTs: by deleting the longest (most expensive) edges from an MST, you naturally break the graph into distinct, tightly-knit groups.
+                    </p>
+                    <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+                        <h4 className="font-semibold text-foreground text-sm">Key Concepts:</h4>
+                        <ul className="list-disc pl-5 space-y-1 text-sm">
+                            <li><strong>Agglomerative Hierarchical Clustering:</strong> This specific approach is mathematically identical to single-linkage clustering.</li>
+                            <li><strong>Minimax Path Property:</strong> The path between any two nodes in an MST uniquely minimizes the maximum edge weight required to travel between them in the full graph.</li>
+                            <li><strong>K-Clusters:</strong> Removing exactly <code>(k - 1)</code> edges from any tree is mathematically guaranteed to leave exactly <code>k</code> disconnected subtrees (clusters).</li>
+                        </ul>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-foreground">
+                            The Algorithm
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+                        <p className="text-xs">
+                            To divide a dataset of points into exactly <em>k</em> distinct clusters:
+                        </p>
+
+                        <div className="space-y-3 mt-2">
+                            <div>
+                                <ol className="list-decimal pl-5 space-y-2 text-xs">
+                                    <li><strong>Create Graph:</strong> Treat every data point as a node. Form a complete graph (connect every node to every other node) where edge weights are the Euclidean distance.</li>
+                                    <li><strong>Build MST:</strong> Compute the MST for this dense graph (often Kruskal's is preferred here since we want to sort all distances anyway).</li>
+                                    <li><strong>Cut Edges:</strong> Find and permanently delete the <strong>(k - 1) longest edges</strong> from the newly formed MST.</li>
+                                    <li><strong>Result:</strong> Because a tree has no cycles, removing 1 edge always splits the tree in 2. Removing (k - 1) edges leaves exactly <em>k</em> disconnected subtrees (your final clusters).</li>
+                                </ol>
+                            </div>
+                            <div className="bg-muted/30 p-2 rounded flex flex-col">
+                                <h4 className="font-semibold text-foreground mb-1 text-[11px] uppercase tracking-wider">Time Complexity</h4>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(N² log N)</Badge>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">Dominated by generating and sorting the <code>N²</code> connections in step 1.</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-foreground">
+                            Characteristics vs. K-Means
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+                        <p className="text-xs">
+                            Why use MST Clustering instead of the popular K-Means?
+                        </p>
+
+                        <div className="space-y-3 mt-2">
+                            <div>
+                                <ul className="list-disc pl-5 space-y-2 text-xs flex-1">
+                                    <li><strong>Arbitrary Shapes:</strong> K-Means forces clusters to be spherical/circular. MST clustering thrives on finding elongated, curved, or completely irregular shapes (like concentric circles).</li>
+                                    <li><strong>The Chaining Effect (Drawback):</strong> Because it relies purely on the closest single connection (single-linkage), a sparse line of "noise" points between two massive clusters can accidentally bridge them into one.</li>
+                                    <li><strong>Outlier Sensitivity:</strong> Removing the longest edge might just detach a single extreme outlier point, leaving the rest of the massive blob as one cluster.</li>
+                                    <li><strong>Deterministic:</strong> K-Means relies on random starts. MST clustering always gives the exact same result every time.</li>
+                                </ul>
+                            </div>
+                            <div className="bg-muted/30 p-2 rounded flex flex-col mt-auto">
+                                <h4 className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1 text-[11px] uppercase tracking-wider">Best Use Case</h4>
+                                <p className="text-[10px] text-muted-foreground">Spatial data grouping, image segmentation, and grouping points with known distinct spatial separation but irregular shapes.</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+
     return (
         <VisualizerLayout
             title="MST-Based Clustering into k Clusters"
@@ -175,24 +262,9 @@ export default function MSTClusteringPage() {
                 time: "O(n² log n)",
                 space: "O(n²)",
             }}
-
+            concepts={MSTClusteringConcepts}
         >
             <div className="w-full space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>How It Works</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-sm text-black">
-                        To get <strong>exactly k clusters</strong>:
-                        <ol className="list-decimal pl-5 mt-2 space-y-1">
-                            <li>Build the MST of all points.</li>
-                            <li>Remove the <strong>(k − 1) longest edges</strong> from the MST.</li>
-                            <li>The MST breaks into <strong>k connected subtrees</strong> — your clusters.</li>
-                        </ol>
-                        Each cluster is internally connected and forms its own tree.
-                    </CardContent>
-                </Card>
-
                 {/* Visualization */}
                 <div className="flex justify-center">
                     <div className="border rounded-lg bg-gray-50 p-4 w-full flex justify-center">

@@ -429,6 +429,101 @@ export default function AVLVisualizer() {
 
   const applicationsShort = applications
 
+  const AVLConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is an AVL Tree?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            An <strong>AVL Tree</strong> is a highly evolved, self-balancing Binary Search Tree (BST) named after its inventors, Adelson-Velsky and Landis. It was the very first self-balancing data structure ever invented.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">The Golden Rule:</h4>
+            <p>
+              An AVL tree enforces one strict property: <strong>The difference in height between the left and right subtrees of ANY node cannot exceed 1.</strong> This difference is called the <em>Balance Factor</em>.
+            </p>
+            <div className="bg-gray-900 border border-border p-3 rounded-md shadow-sm mt-2">
+              <code className="text-green-400 font-mono text-xs">Balance Factor = Height(Left Subtree) - Height(Right Subtree)</code>
+              <p className="text-xs text-gray-400 mt-2">Valid values are strictly <span className="text-white">-1, 0, or 1</span>. If a node hits 2 or -2, the tree instantly rotates to heal itself.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <GitBranch className="w-5 h-5 text-primary" />
+              The Art of Rotation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1">
+            <p className="text-xs">
+              When an insertion or deletion breaks the Balance Factor (becomes ±2), the AVL tree immediately performs a localized <strong>Rotation</strong> to restore balance without breaking the standard BST sorting property.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="bg-muted/30 p-2 rounded">
+                <Badge variant="outline" className="mb-1 bg-yellow-100 text-yellow-800 border-yellow-500 text-[10px]">LL Imbalance</Badge>
+                <p className="text-[10px] leading-tight mt-1">Left-heavy line. Fixed by a swift <strong>Right Rotation</strong> pulling the middle node up.</p>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <Badge variant="outline" className="mb-1 bg-yellow-100 text-yellow-800 border-yellow-500 text-[10px]">RR Imbalance</Badge>
+                <p className="text-[10px] leading-tight mt-1">Right-heavy line. Fixed by a swift <strong>Left Rotation</strong> pulling the middle node up.</p>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <Badge variant="outline" className="mb-1 bg-yellow-100 text-yellow-800 border-yellow-500 text-[10px]">LR Imbalance</Badge>
+                <p className="text-[10px] leading-tight mt-1">Left child, then right child. Fixed by a <strong>Left Rotate</strong> (on child) then <strong>Right Rotate</strong>.</p>
+              </div>
+              <div className="bg-muted/30 p-2 rounded">
+                <Badge variant="outline" className="mb-1 bg-yellow-100 text-yellow-800 border-yellow-500 text-[10px]">RL Imbalance</Badge>
+                <p className="text-[10px] leading-tight mt-1">Right child, then left child. Fixed by a <strong>Right Rotate</strong> (on child) then <strong>Left Rotate</strong>.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              Performance & Trade-offs
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Complexity Profile</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex flex-col bg-muted/50 p-2 rounded">
+                    <span className="font-medium text-muted-foreground mb-1">Search, Insert, Delete</span>
+                    <span className="font-mono text-foreground font-semibold text-green-600">O(log n) guaranteed</span>
+                  </div>
+                  <div className="flex flex-col bg-muted/50 p-2 rounded">
+                    <span className="font-medium text-muted-foreground mb-1">Space</span>
+                    <span className="font-mono text-foreground">O(n)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-3 rounded-lg text-xs">
+                <h4 className="font-semibold text-red-600 dark:text-red-400 mb-1">The Catch: Rotation Overhead</h4>
+                <p className="leading-relaxed">
+                  AVL trees are <em>strictly</em> balanced. While this makes lookups blazing fast, it means frequent Inserts and Deletes trigger lots of costly rotational calculations. If your application writes data constantly but searches rarely, the computational overhead of rotating an AVL tree will slow you down. In write-heavy scenarios, a Red-Black Tree (which is slightly less strictly balanced, meaning fewer rotations) is often preferred.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="AVL Tree Visualizer"
@@ -440,37 +535,9 @@ export default function AVLVisualizer() {
         space: "O(n)",
       }}
       applications={applicationsShort}
+      concepts={AVLConcepts}
     >
       <div className="w-full space-y-8">
-        {/* Intro Card */}
-        <Card className="bg-card border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <GitBranch className="h-5 w-5" />
-              What is an AVL Tree?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-sm text-muted-foreground leading-relaxed">
-              <span className="block">
-                An <strong>AVL Tree</strong> is a type of <em>self-balancing binary search tree</em>.
-                After every insertion or deletion, it checks the balance factor of each node to
-                ensure the height difference between left and right subtrees never exceeds 1.
-              </span>
-              <br />
-              <span className="block">
-                It performs rotations (LL, RR, LR, RL) to maintain balance, guaranteeing
-                <strong> O(log n) </strong> search, insert, and delete operations.
-              </span>
-              <br />
-              <span className="block">
-                <strong>Example:</strong> Insert <code>10, 20, 30</code>.
-                The tree rotates to make <code>20</code> the root, forming a balanced AVL tree.
-              </span>
-            </CardDescription>
-
-          </CardContent>
-        </Card>
 
         {/* Controls */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">

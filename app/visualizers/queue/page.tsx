@@ -6,7 +6,10 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
-import { Layers, Plus, Trash2, Eye, RotateCcw, Star, ArrowLeftRight, RotateCcw as ResetIcon } from "lucide-react"
+import { Layers, Plus, Trash2, Eye, RotateCcw, Star, ArrowLeftRight, RotateCcw as ResetIcon, Volume2, VolumeX } from "lucide-react"
+
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 
 // Types
 interface QueueElement {
@@ -120,12 +123,15 @@ export default function QueueVisualizerPage() {
   const [priorityValue, setPriorityValue] = useState("1")
   const [peekedValue, setPeekedValue] = useState<number | null>(null)
 
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
+
   useEffect(() => {
     setQueue([...initialQueues[queueType]])
     setPeekedValue(null)
     setInputValue("")
     setPriorityValue("1")
-  }, [queueType])
+    stop()
+  }, [queueType, stop])
 
   const applications = applicationsMap[queueType]
 
@@ -134,6 +140,7 @@ export default function QueueVisualizerPage() {
     setPeekedValue(null)
     setInputValue("")
     setPriorityValue("1")
+    stop()
   }
 
   // --- Operations with animations ---
@@ -158,6 +165,7 @@ export default function QueueVisualizerPage() {
       }, 450)
     }
     setInputValue("")
+    announce(`Enqueued ${num}`)
   }
 
   const dequeue = () => {
@@ -169,10 +177,16 @@ export default function QueueVisualizerPage() {
     setTimeout(() => {
       setQueue(prev => prev.filter(el => el.id !== firstId))
     }, 300)
+    const dequeuedValue = queue[0].value
+    announce(`Dequeued ${dequeuedValue}`)
   }
 
   const peek = () => {
-    if (queue.length > 0) setPeekedValue(queue[0].value)
+    if (queue.length > 0) {
+      const top = queue[0].value
+      setPeekedValue(top)
+      announce(`Peeked at ${top}`)
+    }
   }
 
   const pushFront = () => {
@@ -182,6 +196,7 @@ export default function QueueVisualizerPage() {
     setQueue(prev => [newEl, ...prev])
     setTimeout(() => setQueue(prev => prev.map(el => ({ ...el, isNew: false }))), 450)
     setInputValue("")
+    announce(`Pushed ${num} to front`)
   }
 
   const pushBack = () => {
@@ -191,6 +206,7 @@ export default function QueueVisualizerPage() {
     setQueue(prev => [...prev, newEl])
     setTimeout(() => setQueue(prev => prev.map(el => ({ ...el, isNew: false }))), 450)
     setInputValue("")
+    announce(`Pushed ${num} to back`)
   }
 
   const popFront = () => dequeue()
@@ -201,6 +217,8 @@ export default function QueueVisualizerPage() {
     setQueue(prev => prev.map(el => (el.id === lastId ? { ...el, isRemoving: true } : el)))
     setPeekedValue(null)
     setTimeout(() => setQueue(prev => prev.filter(el => el.id !== lastId)), 300)
+    const poppedValue = queue[queue.length - 1].value
+    announce(`Popped ${poppedValue} from back`)
   }
 
   const MAX_CIRCULAR_SIZE = 5
@@ -474,6 +492,97 @@ export default function QueueVisualizerPage() {
 
   const typeInfo = queueTypeDetails[queueType]
 
+  const QueueConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is a Queue?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>Queue</strong> is a linear data structure fundamentally based on the <strong>First-In-First-Out (FIFO)</strong> principle. The very first element that is added into the queue will strictly be the first one to be removed out of it.
+          </p>
+          <p>
+            Think of a physical line at an amusement park or a grocery store checkout. People join the line at the back (<strong>Enqueue</strong>), and they are served and leave the line from the front (<strong>Dequeue</strong>).
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Real-World Analogies & Applications:</h4>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Task Scheduling:</strong> Operating systems queuing background processes or CPU threads.</li>
+              <li><strong>Network Printers:</strong> Multiple print jobs are spooled and managed in the exact order they were received.</li>
+              <li><strong>Data Buffers:</strong> Audio/Video streaming where bytes of data are received and played back sequentially.</li>
+              <li><strong>Breadth-First Search (BFS):</strong> Graph and tree traversal algorithms use queues to explore nodes level-by-level.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {(Object.entries(queueTypeDetails) as [QueueType, typeof queueTypeDetails[QueueType]][]).map(([key, info]) => (
+          <Card key={key} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                {key === "circular" && <RotateCcw className="w-5 h-5 text-primary" />}
+                {key === "deque" && <ArrowLeftRight className="w-5 h-5 text-primary" />}
+                {key === "priority" && <Star className="w-5 h-5 text-primary" />}
+                {key === "linear" && <Layers className="w-5 h-5 text-primary" />}
+                {info.label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+              <div>
+                <p className="font-medium text-foreground mb-3">{info.description}</p>
+
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Mechanics:</h4>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {info.howItWorks.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted/30 p-3 rounded-lg">
+                    <h4 className="font-semibold text-foreground mb-1">Use Cases:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-xs">
+                      {info.useCases.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-semibold text-foreground mb-2 text-xs uppercase tracking-wider">Complexity Profile</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex flex-col bg-muted/50 p-2 rounded">
+                    <span className="font-medium text-muted-foreground mb-1">Time</span>
+                    <span className="font-mono text-foreground">{info.complexity.time}</span>
+                  </div>
+                  <div className="flex flex-col bg-muted/50 p-2 rounded">
+                    <span className="font-medium text-muted-foreground mb-1">Space</span>
+                    <span className="font-mono text-foreground">{info.complexity.space}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mt-6 bg-muted/20 border-l-4 border-amber-500 p-4 rounded-r-lg">
+        <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-2">Edge Cases & Memory Leaks</h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Standard array-based <strong>Linear Queues</strong> suffer from a severe flaw: as elements are removed from the front, the empty space at the beginning of the array becomes unusable unless all remaining elements are repeatedly shifted left (an expensive <code>O(n)</code> operation). This is why <strong>Circular Queues</strong> (Ring Buffers) were invented, allowing the rear pointer to wrap around to the empty spaces at the front via modulo arithmetic, yielding a true <code>O(1)</code> space-efficient structure.
+        </p>
+      </div>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="wjI1WNcIntg" title="Data Structures: Stacks and Queues (HackerRank)" />
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Queue Visualizer"
@@ -482,28 +591,12 @@ export default function QueueVisualizerPage() {
       onReset={resetQueue}
       complexity={complexity}
       applications={applications}
+      concepts={QueueConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Knowledge Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📚 Understanding Queues</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <div>
-              A <strong>queue</strong> is a linear data structure that follows the <strong>First-In-First-Out (FIFO)</strong> principle:
-              the first element added is the first one removed. Enqueue adds to the rear, dequeue removes from the front.
-            </div>
-            <div className="rounded-md border bg-muted/30 p-3 font-mono text-xs text-foreground">
-              Queue = [10, 20, 30] &nbsp;&nbsp;|&nbsp;&nbsp; Front → 10<br />
-              Enqueue(40) → [10, 20, 30, 40]<br />
-              Dequeue() → returns 10, queue becomes [20, 30, 40]
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Queue Type Selector */}
-        <div className="flex justify-center">
+        <div className="flex justify-center mb-6 mt-4">
           <div className="inline-flex rounded-md border p-1 bg-muted w-full max-w-md">
             {(["linear", "circular", "priority", "deque"] as const).map((type) => (
               <button
@@ -521,45 +614,16 @@ export default function QueueVisualizerPage() {
               </button>
             ))}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAudio}
+            title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+            className={`flex items-center gap-2 mt-4 md:mt-0 ${isAudioEnabled ? 'bg-green-100/50 text-green-600 border-green-200 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+          >
+            {isAudioEnabled ? <><Volume2 className="h-4 w-4" /> Audio On</> : <><VolumeX className="h-4 w-4" /> Audio Off</>}
+          </Button>
         </div>
-
-        {/* Dynamic Info for Selected Type */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{typeInfo.label} — Details</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <div className="font-medium text-foreground">{typeInfo.description}</div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">How It Works</div>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  {typeInfo.howItWorks.map((it, i) => <li key={i}>{it}</li>)}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">Common Use Cases</div>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  {typeInfo.useCases.map((it, i) => <li key={i}>{it}</li>)}
-                </ul>
-              </div>
-            </div>
-
-            {typeInfo.notes && typeInfo.notes.length > 0 && (
-              <div>
-                <div className="font-semibold text-foreground mb-1">Notes</div>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  {typeInfo.notes.map((it, i) => <li key={i}>{it}</li>)}
-                </ul>
-              </div>
-            )}
-
-            <div className="text-xs">
-              <strong>Complexity:</strong> Time – {typeInfo.complexity.time}, Space – {typeInfo.complexity.space}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Queue Visualization (BIGGER) */}
         <div className="flex flex-wrap gap-5 justify-center min-h-[220px] md:min-h-[260px] items-center

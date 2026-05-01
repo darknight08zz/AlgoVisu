@@ -27,6 +27,7 @@ import {
   TrendingUp,
   ArrowLeft,
   Crown,
+  ChartBar,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 
@@ -309,6 +310,23 @@ const VisualizersPage = () => {
       available: true,
       type: "application",
       relatedTo: ["sorting"],
+    },
+    {
+      id: "performance-benchmark",
+      title: "Performance Benchmark",
+      description:
+        "Upload a dataset and compare the performance, execution time, and total operations of two algorithms side-by-side.",
+      icon: <ChartBar className="h-6 w-6" />,
+      difficulty: "Advanced",
+      topics: [
+        "Time Complexity",
+        "Empirical Analysis",
+        "Big O",
+        "Testing",
+      ],
+      available: true,
+      type: "application",
+      relatedTo: ["sorting", "sorting-race"],
     },
 
     {

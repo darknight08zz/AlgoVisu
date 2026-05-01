@@ -6,7 +6,10 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
-import { Plus, X, Search, Hash } from "lucide-react"
+import { Plus, X, Search, Hash, Volume2, VolumeX } from "lucide-react"
+
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 
 type HashBucket = string[]
 type HashTable = HashBucket[]
@@ -67,6 +70,8 @@ export default function HashTableVisualizer() {
   const [currentStep, setCurrentStep] = useState(0)
   const [currentCodeLine, setCurrentCodeLine] = useState<number>(-1)
 
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
+
   const initTable = (size: number): HashTable => {
     return Array.from({ length: size }, () => [])
   }
@@ -79,6 +84,7 @@ export default function HashTableVisualizer() {
     setSteps([])
     setCurrentStep(0)
     setCurrentCodeLine(-1)
+    stop()
   }
 
   useEffect(() => {
@@ -128,6 +134,7 @@ export default function HashTableVisualizer() {
     setSteps(stepsSnapshot)
     setCurrentStep(stepsSnapshot.length - 1)
     setKey("")
+    announce(`Inserted ${cleanKey} into bucket ${index}`)
   }
 
   // ---------------------------
@@ -160,6 +167,11 @@ export default function HashTableVisualizer() {
     setSteps(stepsSnapshot)
     setCurrentStep(stepsSnapshot.length - 1)
     setKey("")
+    if (found) {
+      announce(`Found ${cleanKey} in bucket ${index}`)
+    } else {
+      announce(`${cleanKey} not found!`)
+    }
   }
 
   // ---------------------------
@@ -205,6 +217,11 @@ export default function HashTableVisualizer() {
     setSteps(stepsSnapshot)
     setCurrentStep(stepsSnapshot.length - 1)
     setKey("")
+    if (itemIndex !== -1) {
+      announce(`Deleted ${cleanKey} from bucket ${index}`)
+    } else {
+      announce(`${cleanKey} not found to delete!`)
+    }
   }
 
   const stepForward = () => {
@@ -255,6 +272,108 @@ export default function HashTableVisualizer() {
   const liveHashCode = key ? hashFunction(key, tableSize) : null
   const liveCharSum = key ? getCharSum(key) : null
 
+  const HashTableConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is a Hash Table?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>Hash Table</strong> (often called a <em>Hash Map</em> or <em>Dictionary</em>) is an incredibly powerful data structure that pairs <strong>Keys</strong> with <strong>Values</strong>. It is renowned for achieving an average time complexity of <strong>O(1)</strong> (constant time) for lookups, insertions, and deletions.
+          </p>
+          <p>
+            Unlike arrays where you find elements via an integer index (0, 1, 2...), Hash Tables allow you to find an element using a custom Key (like a string: <code>"Alice"</code>). It literally <em>hashes</em> (mathematically mixes) the Key to calculate exactly where the Value is stored in memory.
+          </p>
+
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Real-World Analogies & Applications:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Libraries:</strong> Using a specialized catalog number (Key) to instantly find the exact shelf a book (Value) is on, rather than checking every single book.</li>
+              <li><strong>Databases:</strong> Indexing database records for near-instant retrieval based on an ID or Email.</li>
+              <li><strong>Caching (Redis/Memcached):</strong> Storing recently used data so subsequent requests don't need to completely recalculate or fetch from disk.</li>
+              <li><strong>Compilers:</strong> Symbol tables that track variable names and their associated memory addresses/types.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              Core Mechanics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1">
+            <div>
+              <h4 className="font-semibold text-foreground mb-1">1. The Hash Function</h4>
+              <p>
+                Takes a Key (e.g., <code>"Bob"</code>) and converts it into a deterministic integer. For example, summing the ASCII values of 'B', 'o', 'b'. It then uses the modulo operator (<code>% array_size</code>) to ensure the integer perfectly maps to a valid array index (a <strong>Bucket</strong>).
+              </p>
+            </div>
+
+            <div className="bg-muted/30 p-3 rounded-lg">
+              <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-1">2. Collision Resolution</h4>
+              <p className="text-xs">
+                Sometimes two completely different Keys hash to the exact same Bucket. This is a <strong>Collision</strong>. Modern Hash Tables handle this via:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 mt-1 text-xs">
+                <li><strong>Chaining:</strong> (Used in this visualizer) The Bucket holds a Linked List/Array. If multiple items land in the same Bucket, they are simply appended to the chain.</li>
+                <li><strong>Open Addressing:</strong> If a Bucket is full, probe (search) forward for the next totally empty Bucket.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Hash className="w-5 h-5 text-primary" />
+              Complexity & Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1">Load Factor Strategy</h4>
+                <p className="text-xs">
+                  Load Factor = <code>Keys / Buckets</code>. A high Load Factor means there are tons of items crammed into too few Buckets, drastically increasing collisions and degrading performance from O(1) closer to O(n). To prevent this, Hash Tables monitor their Load Factor. If it exceeds a threshold (often 0.75), they automatically allocate a completely new, much larger array and <strong>Rehash</strong> every single element into the new array.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h4 className="font-semibold text-foreground mb-2 text-xs uppercase tracking-wider">Complexity Profile</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex flex-col bg-muted/50 p-2 rounded">
+                  <span className="font-medium text-muted-foreground mb-1">Time (Average)</span>
+                  <span className="font-mono text-foreground font-semibold text-green-600">O(1)</span>
+                </div>
+                <div className="flex flex-col bg-muted/50 p-2 rounded">
+                  <span className="font-medium text-muted-foreground mb-1">Time (Worst*)</span>
+                  <span className="font-mono text-foreground font-semibold text-red-500">O(n)</span>
+                </div>
+                <div className="flex flex-col bg-muted/50 p-2 rounded col-span-2">
+                  <span className="font-medium text-muted-foreground mb-1">Space</span>
+                  <span className="font-mono text-foreground">O(n)</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">*Worst case O(n) exclusively happens if a terrible Hash Function forces absolutely every Key into the exact same Bucket.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="2BldESGZKB8" title="Data Structures: Hash Tables (HackerRank)" />
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Hash Table Visualizer (Hash Set)"
@@ -267,65 +386,23 @@ export default function HashTableVisualizer() {
         space: "O(n + tableSize)",
       }}
       applications={applications}
+      concepts={HashTableConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Info Card */}
-        <Card className="bg-card border-primary">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-foreground tracking-wide">
-              Hash Table Visualizer
-            </CardTitle>
-
-            <CardDescription className="text-sm text-muted-foreground space-y-2">
-              <div>
-                A <strong>hash table</strong> (also called a <em>hash map</em>) is a powerful data structure
-                that stores data in <strong>key–value pairs</strong> for extremely fast access and updates.
-                Instead of searching through a list, a <strong>hash function</strong> converts each key into
-                an index, called a <strong>bucket</strong>, where that key is stored.
-              </div>
-
-              <div className="p-3 bg-muted/40 rounded-lg border border-border">
-                <p className="font-medium text-foreground mb-2">💡 Example:</p>
-                <p>
-                  Suppose we have 5 buckets (<code>0</code> to <code>4</code>) and we insert the keys
-                  <code> "Alice" </code> and <code> "Bob" </code>.
-                </p>
-                <ul className="list-disc list-inside text-sm mt-2 space-y-1">
-                  <li>
-                    Hash(<code>"Alice"</code>) → <code>sum("Alice") % 5 = 2</code> → goes into <strong>bucket 2</strong>.
-                  </li>
-                  <li>
-                    Hash(<code>"Bob"</code>) → <code>sum("Bob") % 5 = 0</code> → goes into <strong>bucket 0</strong>.
-                  </li>
-                </ul>
-                <p className="mt-2">
-                  If another key also maps to the same bucket, we handle that using <strong>chaining</strong> —
-                  storing multiple keys in a small list inside that bucket.
-                </p>
-              </div>
-
-              <div>
-                Hash tables are widely used in programming — for example, in
-                <strong> dictionaries (Python) </strong>, <strong>objects (JavaScript)</strong>, and
-                <strong> maps (Java, C++)</strong>. Their average time complexity is
-                <strong> O(1)</strong> for insertion, lookup, and deletion.
-              </div>
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <CardDescription className="text-sm text-muted-foreground space-y-2">
-              <div>
-                Use the controls below to <strong>insert</strong> or <strong>delete</strong> keys and watch how
-                the hash table updates dynamically. Each operation is visualized step-by-step, so you can
-                clearly see how hashing, collisions, and chaining work behind the scenes.
-              </div>
-            </CardDescription>
-          </CardContent>
-
-        </Card>
 
         {/* Controls */}
+        <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAudio}
+            title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+            className={`flex items-center gap-2 ${isAudioEnabled ? 'bg-green-100/50 text-green-600 border-green-200 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+          >
+            {isAudioEnabled ? <><Volume2 className="h-4 w-4" /> Audio On</> : <><VolumeX className="h-4 w-4" /> Audio Off</>}
+          </Button>
+        </div>
+
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader>

@@ -123,6 +123,81 @@ export default function PrintQueueVisualizerPage() {
     if (input) input.focus();
   }, []);
 
+  const PrintQueueConcepts = (
+    <div className="space-y-8">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            Queues in the Real World
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>Queue</strong> is a fundamental data structure that strictly follows the <strong>First-In, First-Out (FIFO)</strong> principle. It operates exactly like waiting in a physical line at a grocery store or a theme park: the first person to join the line is guaranteed to be the first one served.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Characteristics:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Enqueue (Push):</strong> Adding a new item. This always happens at the <em>back</em> (or tail) of the queue.</li>
+              <li><strong>Dequeue (Pop):</strong> Removing and processing an item. This always happens at the <em>front</em> (or head) of the queue.</li>
+              <li><strong>Fairness:</strong> Queues are inherently fair. They prevent "starvation" because every item is guaranteed to be processed in the exact order it arrived.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Multi-Printer Environments
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Shared Queue Architecture</h4>
+                <p className="text-xs">In a busy office with multiple printers, sending jobs directly to a specific physical printer is inefficient. Instead, all jobs are sent to a single, centralized print queue (a print server).</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Worker Pools</h4>
+                <p className="text-xs">The physical printers act as "workers." When a printer finishes its current job and becomes idle, it polls the central queue and dequeues the next available job.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Benefits</h4>
+                <p className="text-xs">This architecture maximizes throughput, minimizes total wait times, and provides fault tolerance (if one printer jams, the others continue processing the queue).</p>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+              <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Dequeue Complexity:</span>
+              <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(1)</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Beyond Printers
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2 text-xs">
+              <p>Queues are ubiquitous in software engineering, especially in distributed systems and asynchronous processing:</p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Message Brokers:</strong> Systems like RabbitMQ, Kafka, or AWS SQS use message queues to decouple microservices.</li>
+                <li><strong>Task Scheduling:</strong> Background job processors (like Celery or Bull) enqueue tasks (e.g., sending emails, resizing images) to be handled by background workers.</li>
+                <li><strong>Web Servers:</strong> Incoming HTTP requests are queued before being handed off to thread pools for processing.</li>
+                <li><strong>UI Events:</strong> Mouse clicks, keyboard presses, and screen taps are placed in an "event queue" for the main thread to process sequentially.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
   return (
     <VisualizerLayout
       title="🖨️ Print Job Queue (Multi-Printer)"
@@ -130,23 +205,9 @@ export default function PrintQueueVisualizerPage() {
       difficulty="Beginner"
       onReset={resetQueue}
       complexity={{ time: "O(1)", space: "O(n)" }}
-
+      concepts={PrintQueueConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Knowledge Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📘 How Print Queues Work</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-black space-y-2">
-            <p>
-              Print jobs are added to the <strong>back</strong> of a queue and processed from the <strong>front</strong> (FIFO).
-            </p>
-            <p>
-              With <strong>multiple printers</strong>, the system assigns each job to the first available printer — improving efficiency while preserving order.
-            </p>
-          </CardContent>
-        </Card>
 
         {/* Printers */}
         <div className="flex flex-wrap justify-center gap-8">
@@ -154,8 +215,8 @@ export default function PrintQueueVisualizerPage() {
             <div className="relative">
               <div
                 className={`w-20 h-20 rounded-lg flex items-center justify-center border-2 ${printer1Status === "printing"
-                    ? "border-blue-500 bg-blue-50 animate-pulse"
-                    : "border-gray-300 bg-gray-100"
+                  ? "border-blue-500 bg-blue-50 animate-pulse"
+                  : "border-gray-300 bg-gray-100"
                   }`}
               >
                 <Printer className="h-8 w-8 text-gray-700" />
@@ -174,8 +235,8 @@ export default function PrintQueueVisualizerPage() {
             <div className="relative">
               <div
                 className={`w-20 h-20 rounded-lg flex items-center justify-center border-2 ${printer2Status === "printing"
-                    ? "border-green-500 bg-green-50 animate-pulse"
-                    : "border-gray-300 bg-gray-100"
+                  ? "border-green-500 bg-green-50 animate-pulse"
+                  : "border-gray-300 bg-gray-100"
                   }`}
               >
                 <Printer className="h-8 w-8 text-gray-700" />

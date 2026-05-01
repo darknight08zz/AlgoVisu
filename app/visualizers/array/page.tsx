@@ -6,7 +6,9 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
-import { Search, Plus, Trash2, ArrowUpDown, Code } from "lucide-react"
+import { Search, Plus, Trash2, ArrowUpDown, Code, Volume2, VolumeX } from "lucide-react"
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 
 interface ArrayElement {
   value: number
@@ -59,6 +61,7 @@ export default function ArrayVisualizerPage() {
   const [searchSteps, setSearchSteps] = useState<string[]>([])
   const [currentStepIndex, setCurrentStepIndex] = useState(-1)
   const [algorithm, setAlgorithm] = useState<"linear" | "binary">("linear")
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
 
   const applications = [
     {
@@ -105,6 +108,7 @@ export default function ArrayVisualizerPage() {
     setCurrentStepIndex(-1)
     setSearchValue("")
     setNewValue("")
+    stop()
   }
 
   const addElement = () => {
@@ -136,6 +140,7 @@ export default function ArrayVisualizerPage() {
 
   const linearSearch = async (target: number) => {
     const steps = [`Starting linear search for ${target}`]
+    announce(steps[0])
     let newArray = resetHighlights(array)
 
     for (let i = 0; i < newArray.length; i++) {
@@ -145,6 +150,7 @@ export default function ArrayVisualizerPage() {
       }))
       setArray([...newArray])
       steps.push(`Checking index ${i}: ${newArray[i].value}`)
+      announce(`Checking index ${i}: ${newArray[i].value}`)
       setCurrentStepIndex(steps.length - 1)
       await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -156,12 +162,14 @@ export default function ArrayVisualizerPage() {
         }))
         setArray([...newArray])
         steps.push(`✅ Found ${target} at index ${i}!`)
+        announce(`Found ${target} at index ${i}!`)
         setCurrentStepIndex(steps.length - 1)
         return steps
       }
     }
 
     steps.push(`❌ ${target} not found in array`)
+    announce(`${target} not found in array`)
     setCurrentStepIndex(steps.length - 1)
     setArray(resetHighlights(array))
     return steps
@@ -171,11 +179,13 @@ export default function ArrayVisualizerPage() {
     if (!isSorted(array)) {
       const msg = "❌ Array is not sorted! Binary search requires a sorted array."
       setSearchSteps([msg])
+      announce("Array is not sorted! Binary search requires a sorted array.")
       setCurrentStepIndex(0)
       return [msg]
     }
 
     const steps = [`Starting binary search for ${target}`]
+    announce(steps[0])
     const sortedWithOriginal = array.map((el, i) => ({ ...el, originalIndex: i }))
     sortedWithOriginal.sort((a, b) => a.value - b.value)
 
@@ -194,6 +204,7 @@ export default function ArrayVisualizerPage() {
       }))
       setArray([...currentArray])
       steps.push(`Checking middle element at original index ${originalIndex}: ${midValue}`)
+      announce(`Checking middle element: ${midValue}`)
       setCurrentStepIndex(steps.length - 1)
       await new Promise(resolve => setTimeout(resolve, 600))
 
@@ -204,20 +215,24 @@ export default function ArrayVisualizerPage() {
         }))
         setArray([...currentArray])
         steps.push(`✅ Found ${target} at original index ${originalIndex}!`)
+        announce(`Found ${target}!`)
         setCurrentStepIndex(steps.length - 1)
         return steps
       } else if (midValue < target) {
         steps.push(`${midValue} < ${target} → search right half`)
+        announce(`${midValue} is less than ${target}, searching right half`)
         setCurrentStepIndex(steps.length - 1)
         left = mid + 1
       } else {
         steps.push(`${midValue} > ${target} → search left half`)
+        announce(`${midValue} is greater than ${target}, searching left half`)
         setCurrentStepIndex(steps.length - 1)
         right = mid - 1
       }
     }
 
     steps.push(`❌ ${target} not found in array`)
+    announce(`${target} not found in array`)
     setCurrentStepIndex(steps.length - 1)
     setArray(resetHighlights(array))
     return steps
@@ -239,6 +254,56 @@ export default function ArrayVisualizerPage() {
     setIsSearching(false)
   }
 
+  const ArrayConcepts = (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Detailed Mechanics</h3>
+        <p className="text-sm md:text-base leading-relaxed">
+          An <strong>Array</strong> is a linear data structure that collects elements of the same data type and stores them in contiguous and adjacent memory locations. Because the memory is contiguous, the computer can instantly calculate the exact hardware location of any item in the array if it knows the memory address of the first item and the size of each element. This allows for constant-time <code>O(1)</code> access for reading and writing elements if the index is known. However, because arrays have a fixed size upon creation in memory, inserting or deleting elements from the beginning or middle requires shifting all subsequent elements over by one spot, making those operations relatively slow.
+        </p>
+      </div>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="RBSGKlAvoiM" title="Data Structures: Arrays (HackerRank)" />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4 mt-4">
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h4 className="font-semibold mb-2">Time Complexity</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li><strong>Access:</strong> O(1) - Instant access using indices</li>
+            <li><strong>Search:</strong> O(n) - Linear scan required if unsorted</li>
+            <li><strong>Insertion:</strong> O(n) - Shifting elements is required</li>
+            <li><strong>Deletion:</strong> O(n) - Shifting elements is required</li>
+          </ul>
+        </div>
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h4 className="font-semibold mb-2">Space Complexity</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li><strong>Memory:</strong> O(n) - Proportional to the number of items</li>
+            <li><strong>Overhead:</strong> Extremely Low - No pointers or node structures needed</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-2">Real-World Applications</h3>
+        <ul className="list-disc pl-5 space-y-2">
+          <li><strong>Lookup Tables:</strong> Arrays are commonly used in mathematics and software to store pre-calculated reference values.</li>
+          <li><strong>Matrices:</strong> 2D and 3D arrays map mathematical matrices, extensively used in 3D graphics, machine learning weight layers, and physics engines.</li>
+          <li><strong>Dynamic Arrays (Vectors):</strong> Modern languages abstract arrays into dynamic lists (like Python's `list` or C++'s `std::vector`) that automatically handle resizing behind the scenes while maintaining O(1) lookup.</li>
+        </ul>
+      </div>
+
+      <div className="mt-4 bg-muted/10 border-l-4 border-amber-500 p-4 rounded-r-lg">
+        <h4 className="font-semibold text-amber-500 mb-1">Edge Cases & Considerations</h4>
+        <p className="text-sm">
+          A common edge case in low-level array manipulation is the <strong>Index Out of Bounds</strong> error, which occurs when attempting to access memory outside the allocated block of the array. Furthermore, inserting continuously into a dynamic array can trigger an <strong>O(n) reallocation</strong> when its underlying fixed capacity is exceeded natively in languages like Java (ArrayList) and C++.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Array Visualizer"
@@ -249,48 +314,9 @@ export default function ArrayVisualizerPage() {
         space: "O(1)",
       }}
       applications={applications}
+      concepts={ArrayConcepts}
     >
       <div className="w-full space-y-8">
-        {/* Introduction Section */}
-        <Card className="bg-card shadow-md border border-border rounded-2xl mb-8">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-foreground">
-              Understanding Arrays
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground leading-relaxed space-y-3 text-sm md:text-base">
-            <div>
-              An <strong>Array</strong> is a linear data structure used to store a fixed-size sequence of
-              elements of the same type. Each element is accessed by its <em>index</em>, which represents its
-              position in memory. Arrays are one of the most fundamental data structures in computer science.
-            </div>
-
-            <div>
-              Arrays enable efficient <strong>data storage</strong> and <strong>random access</strong>, meaning any element can
-              be retrieved instantly using its index. However, inserting or deleting elements can be costly,
-              since other elements may need to shift to maintain order.
-            </div>
-
-            <div className="p-4 bg-gray-50 border rounded-lg shadow-sm space-y-2">
-              <h4 className="font-semibold text-foreground">Example:</h4>
-              <div className="bg-gray-900 text-gray-100 p-3 rounded-lg text-sm overflow-x-auto font-mono leading-relaxed">
-                # Example of an array in Python<br />
-                numbers = [11, 22, 33, 44, 55]<br />
-                <br />
-                # Accessing elements<br />
-                print(numbers[0]) &nbsp;&nbsp;# Output: 11<br />
-                print(numbers[3]) &nbsp;&nbsp;# Output: 44
-              </div>
-            </div>
-
-            <div>
-              In this visualizer, you can <strong>add elements</strong>, <strong>sort</strong> them, and observe
-              how different search algorithms like <strong>Linear Search</strong> and <strong>Binary Search</strong>
-              work step-by-step in real time. The visualization demonstrates how comparisons and highlights
-              change dynamically as the algorithm progresses.
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Array Visualization — Enlarged */}
         <div className="flex flex-wrap justify-center gap-4 min-h-[200px] items-center p-6 bg-gradient-to-br from-muted/30 to-background rounded-2xl border border-border shadow-sm">
@@ -354,11 +380,21 @@ export default function ArrayVisualizerPage() {
           </Card>
 
           <Card className="bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 mt-1">
                 <Search className="h-4 w-4" />
                 Search
               </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleAudio}
+                title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+                className={`h-8 w-8 p-0 rounded-full ${isAudioEnabled ? 'bg-green-100/50 text-green-600 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                {isAudioEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                <span className="sr-only">Toggle Audio</span>
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { VisualizerLayout } from "../../../components/visualizer-layout"
 import { Card, CardHeader, CardTitle, CardContent } from "../../../components/ui/card"
+import { Badge } from "../../../components/ui/badge"
 import { Plus, Trash2, RefreshCcw, GitBranch, Play, Square, RotateCcw } from "lucide-react"
 import type { JSX } from "react/jsx-runtime"
 
@@ -25,6 +26,8 @@ interface TraversalStep {
   visitedNodes: string[]
   currentPath: string[]
   codeLine?: number
+  queueValues?: number[]
+  callStackValues?: number[]
 }
 
 type TraversalType = "inorder" | "preorder" | "postorder" | "levelorder"
@@ -358,41 +361,44 @@ export default function TreeVisualizerPage() {
     const result: number[] = []
     const visited: string[] = []
 
-    const pushStep = (node: TreeNode, description: string, codeLine: number, currentPath: string[] = []) => {
-      steps.push({ node, description, visitedNodes: [...visited], currentPath, codeLine })
+    const pushStep = (node: TreeNode, description: string, codeLine: number, currentPath: string[] = [], qValues?: number[], csValues?: number[]) => {
+      steps.push({ node, description, visitedNodes: [...visited], currentPath, codeLine, queueValues: qValues, callStackValues: csValues })
     }
 
-    const inorderTraversal = (node: TreeNode | null, path: string[] = []): void => {
-      if (!node) { pushStep({ value: -1, id: "null" } as TreeNode, "Node is null, return", 2, path); return }
+    const inorderTraversal = (node: TreeNode | null, path: string[] = [], valuePath: number[] = []): void => {
+      if (!node) { pushStep({ value: -1, id: "null" } as TreeNode, "Node is null, return", 2, path, undefined, valuePath); return }
       const p = [...path, node.id]
-      pushStep(node, `Traverse left of ${node.value}`, 4, p)
-      inorderTraversal(node.left || null, p)
+      const vp = [...valuePath, node.value]
+      pushStep(node, `Traverse left of ${node.value}`, 4, p, undefined, vp)
+      inorderTraversal(node.left || null, p, vp)
       visited.push(node.id); result.push(node.value)
-      pushStep(node, `Visit node ${node.value}`, 5, p)
-      pushStep(node, `Traverse right of ${node.value}`, 6, p)
-      inorderTraversal(node.right || null, p)
+      pushStep(node, `Visit node ${node.value}`, 5, p, undefined, vp)
+      pushStep(node, `Traverse right of ${node.value}`, 6, p, undefined, vp)
+      inorderTraversal(node.right || null, p, vp)
     }
 
-    const preorderTraversal = (node: TreeNode | null, path: string[] = []): void => {
-      if (!node) { pushStep({ value: -1, id: "null" } as TreeNode, "Node is null, return", 2, path); return }
+    const preorderTraversal = (node: TreeNode | null, path: string[] = [], valuePath: number[] = []): void => {
+      if (!node) { pushStep({ value: -1, id: "null" } as TreeNode, "Node is null, return", 2, path, undefined, valuePath); return }
       const p = [...path, node.id]
+      const vp = [...valuePath, node.value]
       visited.push(node.id); result.push(node.value)
-      pushStep(node, `Visit node ${node.value}`, 4, p)
-      pushStep(node, `Traverse left of ${node.value}`, 5, p)
-      preorderTraversal(node.left || null, p)
-      pushStep(node, `Traverse right of ${node.value}`, 6, p)
-      preorderTraversal(node.right || null, p)
+      pushStep(node, `Visit node ${node.value}`, 4, p, undefined, vp)
+      pushStep(node, `Traverse left of ${node.value}`, 5, p, undefined, vp)
+      preorderTraversal(node.left || null, p, vp)
+      pushStep(node, `Traverse right of ${node.value}`, 6, p, undefined, vp)
+      preorderTraversal(node.right || null, p, vp)
     }
 
-    const postorderTraversal = (node: TreeNode | null, path: string[] = []): void => {
-      if (!node) { pushStep({ value: -1, id: "null" } as TreeNode, "Node is null, return", 2, path); return }
+    const postorderTraversal = (node: TreeNode | null, path: string[] = [], valuePath: number[] = []): void => {
+      if (!node) { pushStep({ value: -1, id: "null" } as TreeNode, "Node is null, return", 2, path, undefined, valuePath); return }
       const p = [...path, node.id]
-      pushStep(node, `Traverse left of ${node.value}`, 4, p)
-      postorderTraversal(node.left || null, p)
-      pushStep(node, `Traverse right of ${node.value}`, 5, p)
-      postorderTraversal(node.right || null, p)
+      const vp = [...valuePath, node.value]
+      pushStep(node, `Traverse left of ${node.value}`, 4, p, undefined, vp)
+      postorderTraversal(node.left || null, p, vp)
+      pushStep(node, `Traverse right of ${node.value}`, 5, p, undefined, vp)
+      postorderTraversal(node.right || null, p, vp)
       visited.push(node.id); result.push(node.value)
-      pushStep(node, `Visit node ${node.value}`, 6, p)
+      pushStep(node, `Visit node ${node.value}`, 6, p, undefined, vp)
     }
 
     const levelorderTraversal = (): void => {
@@ -400,13 +406,15 @@ export default function TreeVisualizerPage() {
       let level = 0
       while (queue.length) {
         const size = queue.length
-        steps.push({ node: root!, description: `Processing level ${level}`, visitedNodes: [...visited], currentPath: [] })
+        steps.push({ node: root!, description: `Processing level ${level}`, visitedNodes: [...visited], currentPath: [], queueValues: queue.map(q => q.value) })
         for (let i = 0; i < size; i++) {
           const node = queue.shift()!
           visited.push(node.id); result.push(node.value)
-          steps.push({ node, description: `Processing node ${node.value} at level ${level}`, visitedNodes: [...visited], currentPath: [node.id] })
+
           if (node.left) queue.push(node.left)
           if (node.right) queue.push(node.right)
+
+          steps.push({ node, description: `Visited ${node.value}, added children to queue`, visitedNodes: [...visited], currentPath: [node.id], queueValues: queue.map(q => q.value) })
         }
         level++
       }
@@ -518,6 +526,117 @@ export default function TreeVisualizerPage() {
     setRoot(root ? { ...root } : null)
   }
 
+  const TreeConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            Understanding Trees
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm md:text-base text-muted-foreground">
+          <ul className="list-disc list-inside space-y-2 pl-2">
+            {treesIntro.bullets.map((b, i) => <li key={i}>{b}</li>)}
+          </ul>
+          <div className="rounded-md bg-gray-900 border border-border p-4 overflow-x-auto text-gray-100 shadow-inner mt-4">
+            <div className="font-mono text-xs md:text-sm leading-6 whitespace-pre">
+              {treesIntro.diagram.map((l, i) => <div key={i}>{l}</div>)}
+            </div>
+          </div>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Terminology:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Root:</strong> The absolute top node of the tree.</li>
+              <li><strong>Leaf:</strong> A node that has absolutely zero children.</li>
+              <li><strong>Height:</strong> The length of the longest path from the Root to any Leaf.</li>
+              <li><strong>Depth:</strong> The length of the path from the Root to a specific node.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {(Object.entries(modeDetails) as [TreeMode, typeof modeDetails[TreeMode]][]).map(([key, info]) => (
+          <Card key={key} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-foreground">
+                {info.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+              <div>
+                <p className="font-medium text-foreground mb-3">{info.summary}</p>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Mechanics:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      {info.how.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg">
+                    <div>
+                      <h4 className="font-semibold text-green-600 dark:text-green-400 mb-1">Advantages</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-xs">
+                        {info.pros.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-red-600 dark:text-red-400 mb-1">Trade-offs</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-xs">
+                        {info.cons.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1 mt-2">Use Cases:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-xs">
+                      {info.useCases.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="rounded-md bg-gray-900 border border-border p-3 overflow-x-auto text-gray-100 mb-4 shadow-sm">
+                  <div className="font-mono text-[10px] md:text-xs leading-5 whitespace-pre">
+                    {info.diagram.map((line, i) => (
+                      <div key={i}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+
+                <h4 className="font-semibold text-foreground mb-2 text-xs uppercase tracking-wider">Complexity Profile</h4>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="flex flex-col bg-muted/50 p-2 rounded items-center">
+                    <span className="font-medium mb-1">Insert</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.insert}</Badge>
+                  </div>
+                  <div className="flex flex-col bg-muted/50 p-2 rounded items-center">
+                    <span className="font-medium mb-1">Search</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.search}</Badge>
+                  </div>
+                  <div className="flex flex-col bg-muted/50 p-2 rounded items-center">
+                    <span className="font-medium mb-1">Delete</span>
+                    <Badge variant="secondary" className="font-mono">{info.complexity.delete}</Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mt-6 bg-muted/20 border-l-4 border-amber-500 p-4 rounded-r-lg">
+        <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-2">The Danger of Unbalanced Trees</h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          While Binary Search Trees offer incredible <code>O(log n)</code> performance, they are extremely susceptible to input order. If you strictly insert pre-sorted data (e.g., <code>1, 2, 3, 4, 5</code>) into a standard BST, it will degrade into a straight line—a <strong>Linked List</strong>. When this extreme edge case occurs, the tree's height skyrockets to <code>n</code>, utterly destroying its efficiency and reducing search/insert/delete times to a miserable <code>O(n)</code>. This specific catastrophe is exactly why self-balancing trees like AVL Trees and Red-Black Trees were invented.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Binary Tree & BST Visualizer"
@@ -528,105 +647,29 @@ export default function TreeVisualizerPage() {
         space: "O(h)",
       }}
       applications={applications}
+      concepts={TreeConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Knowledge: Trees (always visible) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📚 Understanding Trees</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <ul className="list-disc list-inside space-y-1">
-              {treesIntro.bullets.map((b, i) => <li key={i}>{b}</li>)}
-            </ul>
-            <div className="rounded-md bg-muted/40 p-3 overflow-x-auto">
-              <div className="font-mono text-xs leading-5">
-                {treesIntro.diagram.map((l, i) => <div key={i}>{l}</div>)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Mode Selector */}
-        <Card className="bg-card border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <GitBranch className="h-5 w-5" />
-              Tree Type
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4">
-              <button
-                onClick={() => setMode("binary")}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${mode === "binary" ? "bg-blue-600 text-white" : "bg-muted hover:bg-muted/80"
-                  }`}
-              >
-                Binary Tree (BT)
-              </button>
-              <button
-                onClick={() => setMode("bst")}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${mode === "bst" ? "bg-green-600 text-white" : "bg-muted hover:bg-muted/80"
-                  }`}
-              >
-                Binary Search Tree (BST)
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Mode-specific Knowledge */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{modeDetails[mode].title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <div>{modeDetails[mode].summary}</div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">How it works</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {modeDetails[mode].how.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">Typical use cases</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {modeDetails[mode].useCases.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">Pros</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {modeDetails[mode].pros.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">Cons</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {modeDetails[mode].cons.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-            </div>
-
-            <div className="rounded-md bg-muted/40 p-3 overflow-x-auto">
-              <div className="font-mono text-xs leading-5">
-                {modeDetails[mode].diagram.map((l, i) => <div key={i}>{l}</div>)}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <span className="inline-flex"><span className="font-medium mr-1">Insert:</span> {modeDetails[mode].complexity.insert}</span>
-              <span className="inline-flex"><span className="font-medium mr-1">Search:</span> {modeDetails[mode].complexity.search}</span>
-              <span className="inline-flex"><span className="font-medium mr-1">Delete:</span> {modeDetails[mode].complexity.delete}</span>
-              <span className="inline-flex"><span className="font-medium mr-1">Traverse:</span> {modeDetails[mode].complexity.traverse}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex justify-center mb-6 mt-4">
+          <div className="inline-flex rounded-md border p-1 bg-muted w-full max-w-md">
+            <button
+              onClick={() => setMode("binary")}
+              className={`flex-1 py-2 text-sm font-medium rounded-sm transition-colors ${mode === "binary" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              Binary Tree (BT)
+            </button>
+            <button
+              onClick={() => setMode("bst")}
+              className={`flex-1 py-2 text-sm font-medium rounded-sm transition-colors ${mode === "bst" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              Binary Search Tree (BST)
+            </button>
+          </div>
+        </div>
 
         {/* Tree Visualization */}
         <div className="bg-muted/10 rounded-lg p-4 min-h-[440px] overflow-auto flex justify-center">
@@ -647,26 +690,88 @@ export default function TreeVisualizerPage() {
           </button>
         </div>
 
-        {/* Pseudocode Panel */}
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">Pseudocode</CardTitle>
-          </CardHeader>
-          <div className="font-mono text-sm bg-muted p-4 rounded-md max-h-96 overflow-y-auto">
-            {currentPseudocode.map((line, index) => (
-              <div
-                key={index}
-                className={`py-1 px-2 rounded ${currentCodeLine === index + 1
-                  ? "bg-primary/20 border-l-4 border-primary text-primary-foreground"
-                  : "text-muted-foreground"
-                  }`}
-              >
-                <span className="text-xs text-muted-foreground/70 mr-3">{index + 1}</span>
-                {line || "\u00A0"}
-              </div>
-            ))}
-          </div>
-        </Card>
+        {/* Pseudocode and Aux Panel */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="h-fit">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">Pseudocode</CardTitle>
+            </CardHeader>
+            <div className="font-mono text-sm bg-muted p-4 rounded-md max-h-96 overflow-y-auto">
+              {currentPseudocode.map((line, index) => (
+                <div
+                  key={index}
+                  className={`py-1 px-2 rounded ${currentCodeLine === index + 1
+                    ? "bg-primary/20 border-l-4 border-primary text-primary-foreground"
+                    : "text-muted-foreground"
+                    }`}
+                >
+                  <span className="text-xs text-muted-foreground/70 mr-3">{index + 1}</span>
+                  {line || "\u00A0"}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Auxiliary Data Structure (Queue / Call Stack) */}
+          <Card className="h-fit flex flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                {traversalType === "levelorder" ? "Queue (BFS)" : "Call Stack (DFS)"}
+              </CardTitle>
+            </CardHeader>
+            <div className="p-4 flex-1 flex flex-col justify-end bg-muted/30 rounded-b-md min-h-[160px] border-t">
+              {traversalSteps.length > 0 && currentStep < traversalSteps.length ? (
+                traversalType === "levelorder" ? (
+                  /* Queue Visualization (Horizontal) */
+                  <div className="w-full overflow-x-auto pb-4">
+                    <div className="flex gap-2 items-center min-w-max px-2">
+                      <span className="text-xs font-bold text-muted-foreground uppercase mr-2 shrink-0">Front</span>
+                      {!traversalSteps[currentStep].queueValues || traversalSteps[currentStep].queueValues!.length === 0 ? (
+                        <div className="px-4 py-2 border-2 border-dashed border-muted rounded-md text-muted-foreground italic text-sm">Empty Queue</div>
+                      ) : (
+                        traversalSteps[currentStep].queueValues!.map((val, idx) => (
+                          <div key={`${idx}-${val}`} className="flex items-center">
+                            <div className={`w-12 h-12 flex items-center justify-center font-bold rounded-md shadow-sm border ${idx === 0 ? 'bg-blue-100 border-blue-400 text-blue-800' : 'bg-background border-border text-foreground'}`}>
+                              {val}
+                            </div>
+                            {idx < traversalSteps[currentStep].queueValues!.length - 1 && (
+                              <div className="text-muted-foreground mx-1">←</div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                      <span className="text-xs font-bold text-muted-foreground uppercase ml-2 shrink-0">Back</span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Call Stack Visualization (Vertical) */
+                  <div className="flex flex-col gap-1 w-full max-w-xs mx-auto justify-end flex-1">
+                    {!traversalSteps[currentStep].callStackValues || traversalSteps[currentStep].callStackValues!.length === 0 ? (
+                      <div className="w-full py-6 text-center border-2 border-dashed border-muted rounded-md text-muted-foreground italic text-sm">
+                        Call Stack Empty
+                      </div>
+                    ) : (
+                      traversalSteps[currentStep].callStackValues!.slice().reverse().map((val, idx) => {
+                        const isTop = idx === 0;
+                        return (
+                          <div key={`${idx}-${val}`} className={`w-full py-2 text-center font-mono font-bold rounded-sm border shadow-sm ${isTop ? 'bg-purple-100 border-purple-400 text-purple-900 translate-y-[-2px] transition-transform' : 'bg-background border-border text-muted-foreground opacity-80'}`}>
+                            {traversalType}({val})
+                          </div>
+                        )
+                      })
+                    )}
+                    <div className="w-full border-t-4 border-slate-400 mt-1"></div>
+                    <span className="text-xs text-center text-muted-foreground font-bold uppercase mt-1">Stack Base</span>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full text-sm text-muted-foreground italic">
+                  Start traversal to view {traversalType === "levelorder" ? "Queue" : "Call Stack"}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
 
         {/* Tree Operations */}
         <div className="grid md:grid-cols-4 gap-4">
@@ -838,12 +943,43 @@ export default function TreeVisualizerPage() {
         {/* Step Info */}
         {traversalSteps.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-lg">Traversal Progress</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Traversal Progress & Auxiliary Data</CardTitle></CardHeader>
             <div className="p-4 pt-0">
-              <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">Step {currentStep + 1} of {traversalSteps.length}</div>
-                <div className="text-base">{traversalSteps[currentStep]?.description}</div>
-                <div className="text-sm text-muted-foreground">Visited: [{traversalSteps[currentStep]?.visitedNodes.join(", ")}]</div>
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Step {currentStep + 1} of {traversalSteps.length}</div>
+                  <div className="text-base font-medium">{traversalSteps[currentStep]?.description}</div>
+                </div>
+
+                {traversalType === 'levelorder' ? (
+                  <div>
+                    <div className="text-sm font-medium mb-1 text-muted-foreground">Queue (FIFO):</div>
+                    <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                      {traversalSteps[currentStep]?.queueValues?.length === 0 && <span className="text-muted-foreground text-sm italic">Empty</span>}
+                      {traversalSteps[currentStep]?.queueValues?.map((val, index) => (
+                        <Badge key={index} variant="secondary" className="px-3 py-1 bg-blue-100 text-blue-800 border-blue-200">
+                          {val}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-sm font-medium mb-1 text-muted-foreground">Call Stack (LIFO):</div>
+                    <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                      {traversalSteps[currentStep]?.callStackValues?.length === 0 && <span className="text-muted-foreground text-sm italic">Empty</span>}
+                      {traversalSteps[currentStep]?.callStackValues?.map((val, index) => (
+                        <Badge key={index} variant="secondary" className="px-3 py-1 bg-purple-100 text-purple-800 border-purple-200">
+                          {val}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-sm text-muted-foreground">Visited: [{traversalSteps[currentStep]?.visitedNodes.map(id => id.split('-')[0]).join(", ")}]</div>
+                </div>
               </div>
             </div>
           </Card>

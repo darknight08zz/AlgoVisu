@@ -400,6 +400,61 @@ export default function TrieVisualizer() {
     )
   }
 
+  const TrieConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is a Trie?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>Trie</strong> (pronounced "try", coming from the word re<em>trie</em>val) is a highly specialized tree data structure designed specifically for extremely fast string matching. It is often called a <em>Prefix Tree</em>.
+          </p>
+          <p>
+            Unlike a typical Binary Search Tree where each node stores a full value, a Trie node <strong>only stores a single character</strong>. An entire word is represented by the <em>path</em> taken from the Root node down to a node marked as the end of a word. Because nodes share prefixes (e.g., "cat" and "cap" share the "ca" path), Tries naturally compress overlapping data and make prefix-based searches instantaneous.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Properties:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>The Root is Empty:</strong> The root node never holds a character. It acts as the branching-off point for the first letters of all words.</li>
+              <li><strong>End Flags:</strong> A boolean flag (<code>isEndOfWord</code>) is crucial to distinguish between a strict prefix (e.g., "ap") and an actual inserted word (e.g., "app").</li>
+              <li><strong>Deterministic Indexing:</strong> For an English lowercase alphabet, each node has an array of exactly 26 pointers. The letter 'a' is always at index 0, 'b' at index 1, etc.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {moreInfo.map((sec, i) => (
+          <Card key={i} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-foreground">{sec.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-3 text-sm flex-1 flex flex-col">
+              <ul className="list-disc pl-5 space-y-2">
+                {sec.bullets.map((b, j) => (<li key={j}>{b}</li>))}
+              </ul>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="bg-card shadow-md border border-border rounded-2xl border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <h4 className="font-semibold text-primary mb-2 flex items-center gap-2">
+            <Search className="w-4 h-4" />
+            Complexity Deep Dive
+          </h4>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Tries execute searches in strict <strong>O(m)</strong> time, where <code>m</code> is the length of the string you are searching for. This means finding "cat" takes exactly 3 steps, regardless of whether the Trie contains 100 words or 10 million words. The major trade-off is <strong>Space Complexity</strong>: standard Tries consume massive amounts of memory because every single node, even if it only has one actual child, allocates an array of 26 pointers (most of which will be <code>null</code>).
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Trie Visualizer"
@@ -418,44 +473,10 @@ export default function TrieVisualizer() {
         space: "Up to O(ALPHABET_SIZE × nodes)",
       }}
       applications={applications}
+      concepts={TrieConcepts}
     >
       <div className="w-full space-y-6">
-        {/* What is a Trie? */}
-        <Card className="bg-card border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <GitBranch className="h-5 w-5" />
-              What is a Trie?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="space-y-2 text-sm text-muted-foreground">
-              <span className="block">
-                A <strong>trie</strong> (prefix tree) stores strings by characters along a path from the root.
-                Shared prefixes are stored once, enabling super-fast <em>prefix</em> lookups.
-              </span>
-              <span className="block">
-                Each node corresponds to one character. A node marked <Badge variant="outline" className="mx-1 text-[10px] border-green-500 text-green-700 bg-green-50 py-0 px-1">END</Badge> finishes a word.
-              </span>
-            </CardDescription>
-          </CardContent>
-        </Card>
 
-        {/* Deep Dive / More Info */}
-        <div className="grid md:grid-cols-3 gap-4">
-          {moreInfo.map((sec, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <CardTitle className="text-base">{sec.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <ul className="list-disc pl-5 space-y-1">
-                  {sec.bullets.map((b, j) => (<li key={j}>{b}</li>))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
 
         {/* Controls */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">

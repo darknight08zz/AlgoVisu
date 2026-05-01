@@ -36,6 +36,7 @@ interface TraversalStep {
   visitedNodes: string[]
   queue?: string[]
   stack?: string[]
+  pq?: { node: string; dist: number }[]
   description: string
   highlightedEdges: string[]
   distances?: { [key: string]: number | string } // string for "∞"
@@ -674,6 +675,7 @@ export default function GraphVisualizerPage() {
 
     steps.push({
       visitedNodes: [],
+      pq: [...pq],
       description: `Initialize distances: ${startNode}=0, others=∞`,
       highlightedEdges: [],
       distances: Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, v === Infinity ? "∞" : v])),
@@ -689,6 +691,7 @@ export default function GraphVisualizerPage() {
       steps.push({
         currentNode: u,
         visitedNodes: Array.from(visited),
+        pq: [...pq],
         description: `Processing node ${u} (min distance = ${dist})`,
         highlightedEdges: [],
         distances: Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, v === Infinity ? "∞" : v])),
@@ -705,9 +708,12 @@ export default function GraphVisualizerPage() {
           distances[v] = alt
           parent[v] = u
           pq.push({ node: v, dist: alt })
+          // Sort immediately for visual accuracy in priority queue
+          pq.sort((a, b) => a.dist - b.dist)
           steps.push({
             currentNode: u,
             visitedNodes: Array.from(visited),
+            pq: [...pq],
             description: `Relax edge ${u}→${v}: update dist[${v}] = ${alt}`,
             highlightedEdges: [`${u}-${v}`],
             distances: Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, v === Infinity ? "∞" : v])),
@@ -722,6 +728,7 @@ export default function GraphVisualizerPage() {
       const lastStep = steps[steps.length - 1]
       steps.push({
         ...lastStep,
+        pq: [],
         description: `Shortest path to ${targetNode}: [${path.join(" → ")}] (distance: ${distances[targetNode]})`,
         pathNodes: path,
         codeLine: -1,
@@ -1116,6 +1123,95 @@ export default function GraphVisualizerPage() {
 
   const detail = algorithmDetails[algorithm]
 
+  const GraphConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Network className="h-6 w-6 text-primary" />
+            What is a Graph?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm md:text-base text-muted-foreground">
+          <p>
+            A <strong>Graph</strong> is a non-linear data structure consisting of <strong>Vertices (Nodes)</strong> connected by <strong>Edges (Links)</strong>.
+            It is the fundamental mathematical structure used to model pairwise relationships between objects.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Key Terminologies:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li><strong>Directed via Undirected:</strong> In directed graphs, edges have a specific direction (A → B). In undirected, relationships are mutual (A ↔ B), like a two-way street.</li>
+              <li><strong>Weighted vs Unweighted:</strong> Edges can carry "weights" representing cost, distance, or time. If unweighted, all edges are treated equally (cost of 1).</li>
+              <li><strong>Adjacency List vs Matrix:</strong> Graphs are typically stored in code as either an Adjacency List (an array of arrays, great for sparse graphs) or an Adjacency Matrix (a 2D array grid, great for dense graphs). This visualizer uses an edge list approach under the hood.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {(Object.entries(algorithmDetails) as [AlgorithmType, typeof algorithmDetails[AlgorithmType]][]).map(([key, algoDetail]) => (
+          <Card key={key} className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-foreground">
+                {algoDetail.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col">
+              <p className="text-xs">{algoDetail.overview}</p>
+
+              <div className="grid grid-cols-2 gap-4 mt-2 bg-muted/20 p-3 rounded-lg border">
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1 text-[11px] uppercase tracking-wider">Best For:</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    {algoDetail.bestFor.map((x, i) => <li key={i}>{x}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1 text-[11px] uppercase tracking-wider">Guarantees:</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-green-700 dark:text-green-400">
+                    {algoDetail.guarantees.map((x, i) => <li key={i}>{x}</li>)}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex-1 mt-2">
+                <h4 className="font-semibold text-foreground mb-1 text-[11px] uppercase tracking-wider">Core Idea (Step-by-Step):</h4>
+                <ol className="list-decimal pl-5 space-y-1 text-xs">
+                  {algoDetail.steps.map((x, i) => <li key={i}>{x}</li>)}
+                </ol>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-muted/20 p-3 rounded-lg border mt-2">
+                <div>
+                  <h4 className="font-semibold text-red-500 mb-1 text-[11px] uppercase tracking-wider">Limitations:</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    {algoDetail.limitations.map((x, i) => <li key={i}>{x}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-500 mb-1 text-[11px] uppercase tracking-wider">Tips & Pitfalls:</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    {[...algoDetail.tips, ...algoDetail.pitfalls].map((x, i) => <li key={i}>{x}</li>)}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="p-3 bg-muted/40 rounded-lg border border-border mt-2 flex items-center gap-2">
+                <span className="font-semibold text-foreground text-xs uppercase tracking-wider">Example:</span>
+                <span className="text-xs flex-1">{algoDetail.example}</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-auto pt-4 text-[11px]">
+                <Badge variant="outline" className="bg-muted/50 text-foreground font-mono">Time: {algoDetail.complexity.time}</Badge>
+                <Badge variant="outline" className="bg-muted/50 text-foreground font-mono">Space: {algoDetail.complexity.space}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Graph Algorithm Visualizer"
@@ -1134,114 +1230,25 @@ export default function GraphVisualizerPage() {
         space: currentAlgorithm.spaceComplexity,
       }}
       applications={applications}
+      concepts={GraphConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Graph Information Card */}
-        <Card className="bg-card border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Network className="h-5 w-5" />
-              What is a Graph?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="space-y-2 text-sm text-muted-foreground">
-              <span className="block">
-                A <strong>graph</strong> is a non-linear data structure consisting of <strong>vertices (nodes)</strong> connected by <strong>edges</strong>.
-                It models pairwise relationships—think social networks, road maps, and the internet.
-              </span>
-              <span className="block">
-                <strong>This visualizer</strong> uses an <em>edge list</em> representation. Edges can be directed/undirected and optionally weighted.
-              </span>
-            </CardDescription>
-          </CardContent>
-        </Card>
 
         {/* Algorithm Toggle Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {(["bfs", "dfs", "dijkstra", "bellman-ford", "floyd-warshall"] as AlgorithmType[]).map((algo) => (
-            <Button
-              key={algo}
-              variant={algorithm === algo ? "default" : "outline"}
-              size="sm"
-              onClick={() => setAlgorithm(algo)}
-              className="capitalize"
-              aria-pressed={algorithm === algo}
-            >
-              {algorithmDetails[algo].name}
-            </Button>
-          ))}
+        <div className="flex flex-wrap justify-center gap-2 mb-6 mt-4">
+          <div className="inline-flex rounded-md border p-1 bg-muted w-full max-w-3xl overflow-x-auto whitespace-nowrap scrollbar-hide">
+            {(["bfs", "dfs", "dijkstra", "bellman-ford", "floyd-warshall"] as AlgorithmType[]).map((algo) => (
+              <button
+                key={algo}
+                onClick={() => setAlgorithm(algo)}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-sm transition-colors ${algorithm === algo ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                {algorithmDetails[algo].name}
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* Deep-Dive Info for Selected Algorithm */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">About {detail.name}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>{detail.overview}</p>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">Best for</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {detail.bestFor.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">Requirements / Assumptions</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {detail.requirements.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">Limitations</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {detail.limitations.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">What it Guarantees</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {detail.guarantees.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-            </div>
-
-            <div>
-              <div className="font-semibold text-foreground mb-1">Core Idea (Step-by-Step)</div>
-              <ol className="list-decimal list-inside space-y-1">
-                {detail.steps.map((x, i) => <li key={i}>{x}</li>)}
-              </ol>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <span><span className="font-medium mr-1">Time:</span>{detail.complexity.time}</span>
-              <span><span className="font-medium mr-1">Space:</span>{detail.complexity.space}</span>
-              <span className="col-span-2 md:col-span-2">
-                <span className="font-medium mr-1">Example:</span>{detail.example}
-              </span>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <div className="font-semibold text-foreground mb-1">Common Pitfalls</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {detail.pitfalls.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-              <div>
-                <div className="font-semibold text-foreground mb-1">Tips</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {detail.tips.map((x, i) => <li key={i}>{x}</li>)}
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
 
         {/* Graph Canvas */}
@@ -1493,11 +1500,12 @@ export default function GraphVisualizerPage() {
               </div>
               <div>
                 <div className="text-lg font-bold text-accent">
-                  {traversalSteps[currentStep]?.queue?.length ||
-                    traversalSteps[currentStep]?.stack?.length || 0}
+                  {algorithm === "dijkstra"
+                    ? (traversalSteps[currentStep]?.pq?.length || 0)
+                    : (traversalSteps[currentStep]?.queue?.length || traversalSteps[currentStep]?.stack?.length || 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {algorithm === "bfs" ? "Queue" : algorithm === "dfs" ? "Stack" : "—"}
+                  {algorithm === "bfs" ? "Queue" : algorithm === "dfs" ? "Stack" : algorithm === "dijkstra" ? "Priority Q" : "—"}
                 </div>
               </div>
             </div>
@@ -1506,27 +1514,47 @@ export default function GraphVisualizerPage() {
 
         {traversalSteps.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-lg">Current Step</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Auxiliary Data Structure & Details</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-sm p-3 bg-accent/10 rounded-lg border border-accent/20">
+              <div className="text-sm p-3 bg-accent/10 rounded-lg border border-accent/20 mb-4">
                 {traversalSteps[currentStep]?.description || "Ready to start algorithm"}
               </div>
               {algorithm === "bfs" && traversalSteps[currentStep]?.queue && (
-                <div className="mt-3">
-                  <div className="text-sm font-medium mb-1">Queue:</div>
-                  <div className="flex gap-1">
+                <div>
+                  <div className="text-sm font-medium mb-2">Queue (FIFO):</div>
+                  <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                    {traversalSteps[currentStep].queue!.length === 0 && <span className="text-muted-foreground text-sm italic">Empty</span>}
                     {traversalSteps[currentStep].queue!.map((nodeId, index) => (
-                      <Badge key={index} variant="outline">{nodeId}</Badge>
+                      <Badge key={index} variant="secondary" className="text-base px-3 py-1 bg-blue-100 text-blue-800 border-blue-200">
+                        {nodeId}
+                      </Badge>
                     ))}
                   </div>
                 </div>
               )}
               {algorithm === "dfs" && traversalSteps[currentStep]?.stack && (
-                <div className="mt-3">
-                  <div className="text-sm font-medium mb-1">Stack:</div>
-                  <div className="flex gap-1">
+                <div>
+                  <div className="text-sm font-medium mb-2">Stack (LIFO):</div>
+                  <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                    {traversalSteps[currentStep].stack!.length === 0 && <span className="text-muted-foreground text-sm italic">Empty</span>}
                     {traversalSteps[currentStep].stack!.map((nodeId, index) => (
-                      <Badge key={index} variant="outline">{nodeId}</Badge>
+                      <Badge key={index} variant="secondary" className="text-base px-3 py-1 bg-purple-100 text-purple-800 border-purple-200">
+                        {nodeId}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {algorithm === "dijkstra" && traversalSteps[currentStep]?.pq && (
+                <div>
+                  <div className="text-sm font-medium mb-2">Priority Queue (Min-Heap):</div>
+                  <div className="flex gap-2 flex-wrap min-h-[40px] p-2 bg-muted/30 rounded-md border">
+                    {traversalSteps[currentStep].pq!.length === 0 && <span className="text-muted-foreground text-sm italic">Empty</span>}
+                    {traversalSteps[currentStep].pq!.map((item, index) => (
+                      <Badge key={index} variant="secondary" className="text-sm px-3 py-1 bg-amber-100 text-amber-800 border-amber-200 flex items-center gap-1">
+                        <span className="font-bold">{item.node}</span>
+                        <span className="text-xs opacity-70 border-l border-amber-300 pl-1 ml-1">d: {item.dist}</span>
+                      </Badge>
                     ))}
                   </div>
                 </div>

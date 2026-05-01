@@ -5,6 +5,7 @@ import { VisualizerLayout } from "../../../components/visualizer-layout"
 import { Card, CardHeader, CardTitle, CardContent } from "../../../components/ui/card"
 import { Input } from "../../../components/ui/input"
 import { Button } from "../../../components/ui/button"
+import { Badge } from "../../../components/ui/badge"
 import {
   Folder,
   File as FileIcon,
@@ -317,9 +318,8 @@ export default function FileSystemExplorerPage() {
     return (
       <div key={node.id} className="pl-2">
         <div
-          className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm cursor-pointer transition-colors ${
-            isSel ? "bg-primary/10 ring-1 ring-primary" : isMatch ? "bg-yellow-50" : "hover:bg-muted"
-          }`}
+          className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm cursor-pointer transition-colors ${isSel ? "bg-primary/10 ring-1 ring-primary" : isMatch ? "bg-yellow-50" : "hover:bg-muted"
+            }`}
           onClick={() => setSelectedId(node.id)}
         >
           {isFolder ? (
@@ -363,7 +363,7 @@ export default function FileSystemExplorerPage() {
     "The same spacing math (H_GAP, V_GAP) lays out the diagram",
   ]
 
-  
+
 
   // Breadcrumbs for selected node
   const breadcrumbs = useMemo(() => {
@@ -372,33 +372,88 @@ export default function FileSystemExplorerPage() {
     return path
   }, [selectedNode, pathTo])
 
+  const FileSystemConcepts = (
+    <div className="space-y-8">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            File Systems as Trees
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>file system</strong> naturally forms a hierarchical, N-ary tree structure. The single, top-level directory (like <code>C:\</code> on Windows or <code>/</code> on Unix) is the root node of the tree.
+          </p>
+          <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+            <h4 className="font-semibold text-foreground text-sm">Node Terminology:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm mt-2">
+              <li><strong>Folders (Directories):</strong> Act as <em>internal nodes</em> because they can have children (other folders or files).</li>
+              <li><strong>Files:</strong> Act as <em>leaf nodes</em> because they mark the end of a branch and cannot contain other hierarchical items.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Tree Traversals in Practice
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2">
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Preorder Traversal</h4>
+                <p className="text-xs">Used to generate the linear outline view of the folders. It visits a folder, then recursively visits all its contents (like the <code>tree</code> command in the terminal).</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Depth-First Search (DFS)</h4>
+                <p className="text-xs">Used when searching for a file by name. If found, the recursion stack naturally provides the absolute path (breadcrumbs) back to the root.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Postorder Traversal</h4>
+                <p className="text-xs">Used for calculating total directory sizes or deleting folders. You must calculate the size of (or delete) all children <em>before</em> you process the parent folder.</p>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+              <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Traversal Complexity:</span>
+              <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(N)</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              Visualizer Architecture
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <div className="space-y-3 mt-2 text-xs">
+              <p>This layout uses the same underlying mathematics as our Binary Search Tree visualizer, but adapted for N-ary structures:</p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Recursive Positioning:</strong> Nodes are given X/Y coordinates dynamically during a top-down pass.</li>
+                <li><strong>Dynamic Spacing:</strong> Horizontal spacing tightens at deeper levels to prevent overlapping branches across broad directory structures.</li>
+                <li><strong>N-ary Distribution:</strong> Unlike a BST (2 children), this layout calculates the total width needed for <em>n</em> children and distributes them evenly around their parent's center X coordinate.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
   return (
     <VisualizerLayout
       title="File System & Folder Explorer"
       description="Explore, edit, and visualize a folder tree. Built on the same tree-rendering logic as the Binary Tree/BST visualizer."
       difficulty="Beginner"
       complexity={{ time: "O(n) traversal", space: "O(h)" }}
-      
+      concepts={FileSystemConcepts}
     >
       <div className="w-full space-y-6">
-        {/* Intro / Description */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📁 What is this?</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-black space-y-2">
-            <p>{description}</p>
-            <div className="rounded-md bg-muted/40 p-3">
-              <div className="text-foreground font-medium mb-1">How it reuses the Tree Visualizer</div>
-              <ul className="list-disc list-inside space-y-1">
-                {howItUsesTreeViz.map((x, i) => (
-                  <li key={i}>{x}</li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Controls */}
         <div className="grid md:grid-cols-3 gap-4">
           <Card>
@@ -515,9 +570,8 @@ export default function FileSystemExplorerPage() {
                 breadcrumbs.map((b, i) => (
                   <div key={b.id} className="flex items-center">
                     <button
-                      className={`px-2 py-1 rounded-md hover:bg-muted ${
-                        b.id === selectedId ? "bg-primary/10 ring-1 ring-primary" : ""
-                      }`}
+                      className={`px-2 py-1 rounded-md hover:bg-muted ${b.id === selectedId ? "bg-primary/10 ring-1 ring-primary" : ""
+                        }`}
                       onClick={() => setSelectedId(b.id)}
                     >
                       {b.name}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { VisualizerLayout } from "../../../components/visualizer-layout"
 import { Button } from "../../../components/ui/button"
+import { Badge } from "../../../components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Slider } from "../../../components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select"
@@ -16,6 +17,7 @@ type Step = {
     pCol: number
     status: "placing" | "safe" | "unsafe" | "backtracking" | "solution"
     description: string
+    callStack: { row: number, col: number }[]
 }
 
 export default function NQueensVisualizer() {
@@ -46,6 +48,7 @@ export default function NQueensVisualizer() {
         const newSteps: Step[] = []
         const tempBoard = Array(n).fill(0).map(() => Array(n).fill(0))
         let solCount = 0
+        const currentStack: { row: number, col: number }[] = []
 
         const isSafe = (row: number, col: number) => {
             // Check column
@@ -71,59 +74,55 @@ export default function NQueensVisualizer() {
                     currentRow: row,
                     pCol: -1,
                     status: "solution",
-                    description: `Solution ${solCount} found!`
+                    description: `Solution ${solCount} found!`,
+                    callStack: [...currentStack]
                 })
                 return
             }
 
             for (let col = 0; col < n; col++) {
-                // 1. Placing
+                currentStack.push({ row, col })
                 tempBoard[row][col] = 1
                 newSteps.push({
                     board: tempBoard.map(r => [...r]),
                     currentRow: row,
                     pCol: col,
                     status: "placing",
-                    description: `Trying Queen at (${row}, ${col})...`
+                    description: `Trying Queen at (${row}, ${col})...`,
+                    callStack: [...currentStack]
                 })
 
                 if (isSafe(row, col)) {
-                    // 2. Safe
                     newSteps.push({
                         board: tempBoard.map(r => [...r]),
                         currentRow: row,
                         pCol: col,
                         status: "safe",
-                        description: `Position (${row}, ${col}) is safe.`
+                        description: `Position (${row}, ${col}) is safe.`,
+                        callStack: [...currentStack]
                     })
-
                     backtrack(row + 1)
-
-                    // Backtracked
-                    if (row < n) { // If we returned from a deeper level
-                        // This is technically expected after exploring subs
-                    }
-
                 } else {
-                    // 3. Unsafe
                     newSteps.push({
                         board: tempBoard.map(r => [...r]),
                         currentRow: row,
                         pCol: col,
                         status: "unsafe",
-                        description: `Position (${row}, ${col}) is under attack!`
+                        description: `Position (${row}, ${col}) is under attack!`,
+                        callStack: [...currentStack]
                     })
                 }
 
-                // 4. Backtrack (Remove)
                 tempBoard[row][col] = 0
                 newSteps.push({
                     board: tempBoard.map(r => [...r]),
                     currentRow: row,
                     pCol: col,
                     status: "backtracking",
-                    description: `Backtracking from (${row}, ${col}).`
+                    description: `Backtracking from (${row}, ${col}).`,
+                    callStack: [...currentStack]
                 })
+                currentStack.pop()
             }
         }
 
@@ -183,6 +182,81 @@ export default function NQueensVisualizer() {
         return ""
     }
 
+    const NQueensConcepts = (
+        <div className="space-y-8">
+            <Card className="bg-card shadow-md border border-border rounded-2xl">
+                <CardHeader>
+                    <CardTitle className="text-xl font-bold text-foreground">
+                        The N-Queens Problem
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+                    <p>
+                        The <strong>N-Queens problem</strong> is the challenge of placing <em>N</em> chess queens on an <em>N×N</em> chessboard so that no two queens threaten each other. This means no two queens can share the same row, column, or diagonal.
+                    </p>
+                    <div className="p-4 bg-muted/30 border rounded-lg shadow-sm space-y-2 mt-4">
+                        <h4 className="font-semibold text-foreground text-sm">Constraint Satisfaction:</h4>
+                        <p className="text-sm">It is a classic example of a <strong>Constraint Satisfaction Problem (CSP)</strong>. Instead of blindly trying every possible arrangement, we use the <strong>Backtracking</strong> algorithm to incrementally build candidates, abandoning a path the moment it violates constraints.</p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                            Backtracking Algorithm
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+                        <div className="space-y-3 mt-2">
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Step 1: Placement</h4>
+                                <p className="text-xs">The algorithm attempts to place queens row by row, starting from the top. It checks each column in the current row from left to right.</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Step 2: Constraint Checking</h4>
+                                <p className="text-xs">Before finalizing a placement, it verifies if the cell is under attack. We only need to check the columns and diagonals <em>above</em> the current row, since no queens exist below yet.</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-1 text-xs uppercase tracking-wider">Step 3: Backtracking</h4>
+                                <p className="text-xs">If it hits a dead end (no safe cells in the current row), it undoes the previous placement, returning to the row above to try the next available column. This prunes massive branches off the decision tree.</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+                            <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Time Complexity:</span>
+                            <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(N!)</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                            Complexity Insights
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+                        <div className="space-y-3 mt-2 text-xs">
+                            <ul className="list-disc pl-5 space-y-2">
+                                <li><strong>Theoretical Time: <code>O(N!)</code></strong> - For the first row there are N choices, for the second roughly N-1, and so on.</li>
+                                <li><strong>Practical Time:</strong> Backtracking prunes the tree significantly. For example, standard brute-force on an 8x8 board requires checking 4,426,165,368 combinations. Backtracking only evaluates about 15,720 states.</li>
+                                <li><strong>Space Complexity: <code>O(N)</code></strong> - Dominated by the depth of the recursion stack (which never exceeds N rows) and the array tracking board state.</li>
+                                <li><strong>Finding all solutions:</strong> Even after finding a valid N-Queens configuration, the algorithm forces a backtrack to uncover all other possible valid layouts.</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-muted/30 p-2 rounded flex items-center justify-between mt-auto">
+                            <span className="font-semibold text-foreground text-[11px] uppercase tracking-wider">Space Complexity:</span>
+                            <Badge variant="outline" className="font-mono bg-muted/50 border-primary/20">O(N)</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    )
+
     return (
         <VisualizerLayout
             title="N-Queens Visualizer"
@@ -194,6 +268,7 @@ export default function NQueensVisualizer() {
                 { title: "VLSI Testing", description: "Testing chip designs", examples: ["Circuit Layouts"] },
                 { title: "AI Gaming", description: "Solving puzzles and pathing", examples: ["Game Solvers"] }
             ]}
+            concepts={NQueensConcepts}
         >
             <div className="flex flex-col items-center space-y-8">
 
@@ -231,17 +306,41 @@ export default function NQueensVisualizer() {
                 </div>
 
                 {/* Status */}
-                <div className="text-center h-8">
+                <div className="text-center h-8 my-2">
                     {activeStep ? (
                         <span className={`text-lg font-medium px-4 py-1 rounded-full ${activeStep.status === 'solution' ? 'bg-green-100 text-green-800' :
-                                activeStep.status === 'unsafe' ? 'bg-red-100 text-red-800' :
-                                    'bg-slate-100'
+                            activeStep.status === 'unsafe' ? 'bg-red-100 text-red-800' :
+                                'bg-slate-100'
                             }`}>
                             {activeStep.description}
                         </span>
                     ) : (
                         <span className="text-muted-foreground">Select size and press Start</span>
                     )}
+                </div>
+
+                {/* Auxiliary Data: Call Stack */}
+                <div className="w-full max-w-4xl">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Recursive Call Stack (Active Placements)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-wrap gap-2 min-h-[40px] items-end bg-muted/30 p-2 rounded-md border">
+                                {activeStep ? (
+                                    activeStep.callStack.length === 0 ? (
+                                        <span className="text-muted-foreground text-sm italic">Empty</span>
+                                    ) : (
+                                        activeStep.callStack.map((frame, i) => (
+                                            <div key={i} className={`px-2 py-1 text-xs md:text-sm border rounded-md font-mono ${i === activeStep.callStack.length - 1 ? 'bg-purple-200 text-purple-900 border-purple-400 font-bold -translate-y-1 transition-transform' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                                                row:{frame.row},col:{frame.col}
+                                            </div>
+                                        ))
+                                    )
+                                ) : <span className="text-muted-foreground text-sm italic">Ready to start</span>}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Board */}

@@ -6,7 +6,10 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
-import { Plus, X, BarChart3, Zap } from "lucide-react"
+import { Plus, X, BarChart3, Zap, Volume2, VolumeX } from "lucide-react"
+
+import { useAudioNarration } from "../../../lib/hooks/useAudioNarration"
+import { VideoEmbed } from "../../../components/ui/video-embed"
 
 type HeapType = "min" | "max"
 type HeapStep = {
@@ -61,6 +64,8 @@ export default function HeapVisualizer() {
   const [currentStep, setCurrentStep] = useState(0)
   const [currentCodeLine, setCurrentCodeLine] = useState<number>(-1)
 
+  const { isAudioEnabled, toggleAudio, announce, stop } = useAudioNarration()
+
   const applications = [
     {
       title: "Priority Queues",
@@ -84,6 +89,7 @@ export default function HeapVisualizer() {
     setSteps([])
     setCurrentStep(0)
     setCurrentCodeLine(-1)
+    stop()
   }
 
   // --- Heap helpers that adapt to min/max cleanly ---
@@ -178,6 +184,7 @@ export default function HeapVisualizer() {
     setSteps(localSteps)
     setCurrentStep(0)
     setInputValue("")
+    announce(`Inserted ${val}`)
   }
 
   // --- Extract root (heapify down) ---
@@ -251,6 +258,7 @@ export default function HeapVisualizer() {
     setHeap(arr)
     setSteps(localSteps)
     setCurrentStep(0)
+    announce(`Extracted root ${root}`)
   }
 
   // --- Build heap (Floyd) ---
@@ -304,9 +312,19 @@ export default function HeapVisualizer() {
     setSteps(localSteps)
     setCurrentStep(0)
     setArrayInput("")
+    announce(`Built heap from array`)
   }
 
-  const stepForward = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))
+  const stepForward = () => {
+    setCurrentStep(prev => {
+      const next = Math.min(prev + 1, steps.length - 1)
+      if (steps[next]?.description) {
+        announce(steps[next].description)
+      }
+      return next
+    })
+  }
+
   const stepBack = () => setCurrentStep(prev => Math.max(prev - 1, 0))
   const reset = () => resetHeap()
 
@@ -345,6 +363,100 @@ export default function HeapVisualizer() {
     )
   }
 
+  const HeapConcepts = (
+    <div className="space-y-6">
+      <Card className="bg-card shadow-md border border-border rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-foreground">
+            What is a Heap?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base">
+          <p>
+            A <strong>Heap</strong> is a specialized tree-based data structure that strictly satisfies the <em>Heap Property</em>. While conceptually a completely filled Binary Tree, it is almost always implemented under the hood as a flat, contiguous Array for extreme memory and cache efficiency.
+          </p>
+
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+            <div className="p-3 bg-muted/30 border rounded-lg">
+              <h4 className="font-semibold text-foreground mb-1">Min-Heap</h4>
+              <p className="text-xs">The value of any parent node must always be <strong>less than or equal to</strong> the values of its children. The absolute minimum element is invariably at the root.</p>
+            </div>
+            <div className="p-3 bg-muted/30 border rounded-lg">
+              <h4 className="font-semibold text-foreground mb-1">Max-Heap</h4>
+              <p className="text-xs">The value of any parent node must always be <strong>greater than or equal to</strong> the values of its children. The absolute maximum element sits securely at the root.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Array Representation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1">
+            <p>
+              Because a Heap is a <em>Complete Binary Tree</em> (all levels are maximally filled except possibly the last, which is filled left-to-right), there are absolutely no gaps. This allows us to navigate the tree entirely using fast mathematical indices rather than slow memory pointers.
+            </p>
+            <div className="bg-gray-900 border border-border p-3 rounded-md shadow-sm">
+              <h4 className="font-semibold text-gray-300 text-xs uppercase tracking-wider mb-2">0-Indexed Math Formulas:</h4>
+              <ul className="list-none space-y-2 font-mono text-xs text-green-400">
+                <li><span className="text-gray-400">Parent      =</span> Math.floor((i - 1) / 2)</li>
+                <li><span className="text-gray-400">Left Child  =</span> (2 * i) + 1</li>
+                <li><span className="text-gray-400">Right Child =</span> (2 * i) + 2</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card shadow-md border border-border rounded-2xl flex flex-col hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Core Operations & Complexity
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground leading-relaxed space-y-4 text-sm flex-1 flex flex-col justify-between">
+            <ul className="list-disc pl-5 space-y-3">
+              <li>
+                <div>
+                  <span className="font-semibold text-foreground">Insert</span> <Badge variant="secondary" className="ml-1 text-[10px] font-mono">O(log n)</Badge>
+                </div>
+                <p className="text-xs mt-1">Append the new value to the absolute very end of the array, then bubble it upwards (<em>Heapify-Up</em>) by continuously swapping with its parent until the Heap Property is restored.</p>
+              </li>
+              <li>
+                <div>
+                  <span className="font-semibold text-foreground">Extract Root</span> <Badge variant="secondary" className="ml-1 text-[10px] font-mono">O(log n)</Badge>
+                </div>
+                <p className="text-xs mt-1">Remove the root. Take the absolute last element in the array and forcefully place it at the root. Then, bubble it downwards (<em>Heapify-Down</em>) by swapping with its optimal child.</p>
+              </li>
+              <li>
+                <div>
+                  <span className="font-semibold text-foreground">Floyd's Build-Heap</span> <Badge variant="secondary" className="ml-1 text-[10px] font-mono text-green-600 dark:text-green-400">O(n)</Badge>
+                </div>
+                <p className="text-xs mt-1">Astonishingly, converting an entirely random, unsorted array into a perfectly valid heap structure only takes linear <code>O(n)</code> time using Floyd's algorithm, not the naive <code>O(n log n)</code>.</p>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-6 bg-muted/20 border-l-4 border-amber-500 p-4 rounded-r-lg">
+        <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-2">Crucial Distinction: Heaps vs Sorting</h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          A common misconception is that a Heap is a fully sorted array. <strong>It is not.</strong> A Heap only guarantees that parents are greater/less than their children. Siblings have absolutely no guaranteed relationship to each other. If you read a Heap array from index 0 to N-1, the numbers will likely not be sorted. It is only by repeatedly extracting the root that you get elements in a sorted order (which is precisely how <strong>Heap Sort</strong> functions).
+        </p>
+      </div>
+
+      <div className="mt-6 mb-6">
+        <VideoEmbed youtubeId="t0Cq6tVNRBA" title="Data Structures: Heaps (HackerRank)" />
+      </div>
+    </div>
+  );
+
   return (
     <VisualizerLayout
       title="Heap Visualizer"
@@ -363,91 +475,21 @@ export default function HeapVisualizer() {
         space: "O(n)",
       }}
       applications={applications}
+      concepts={HeapConcepts}
     >
       <div className="w-full space-y-6">
-        <Card className="bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 className="h-5 w-5" />
-              What is a Heap?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                A <strong>heap</strong> is a complete binary tree stored as an array that satisfies the{" "}
-                <em>heap property</em>:
-                <br />
-                • <strong>Min-heap</strong>: each parent ≤ its children (root is the <em>minimum</em>).<br />
-                • <strong>Max-heap</strong>: each parent ≥ its children (root is the <em>maximum</em>).
-              </p>
-              <p>
-                Operations: <strong>insert</strong> (heapify-up), <strong>extract-root</strong> (heapify-down),
-                <strong> peek</strong> (read root).
-              </p>
-              <p>
-                <strong>Floyd’s Build-Heap</strong> builds a heap from an array in <strong>O(n)</strong> by heapifying
-                from the last non-leaf up to the root.
-              </p>
-            </CardDescription>
-          </CardContent>
-        </Card>
-        <Card className="bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Deep Dive: How Heaps Work</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-4">
-            <div>
-              <h4 className="font-semibold mb-1">Array Representation (0-based indexing)</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Node at index <code>i</code> has:
-                  <ul className="list-disc pl-5">
-                    <li>Left child: <code>2*i + 1</code></li>
-                    <li>Right child: <code>2*i + 2</code></li>
-                    <li>Parent: <code>Math.floor((i - 1) / 2)</code></li>
-                  </ul>
-                </li>
-                <li>Because the tree is <em>complete</em>, there are no gaps in the array.</li>
-              </ul>
-            </div>
 
-            <div>
-              <h4 className="font-semibold mb-1">Operations & Costs</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong>Insert:</strong> append &amp; <em>heapify-up</em> — <code>O(log n)</code></li>
-                <li><strong>Extract Root:</strong> swap with last, pop, <em>heapify-down</em> — <code>O(log n)</code></li>
-                <li><strong>Peek Root:</strong> read <code>heap[0]</code> — <code>O(1)</code></li>
-                <li><strong>Build-Heap (Floyd):</strong> <code>O(n)</code> (better than inserting one-by-one)</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-1">Min vs Max</h4>
-              <p>
-                This visualizer toggles comparison logic so the same functions act as either min-heap or max-heap.
-                We simply invert the comparator used during heapify.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-1">Common Pitfalls</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Using 1-based formulas with a 0-based array (causes wrong parent/children indices).</li>
-                <li>Forgetting to <em>heapify-down</em> after extracting the root.</li>
-                <li>Assuming a heap is sorted; it’s <em>partially ordered</em>, not globally sorted.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-1">Where Heaps Shine</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Priority queues (schedulers, simulation event queues).</li>
-                <li>Graph algorithms (Dijkstra, Prim with a PQ variant).</li>
-                <li>Top-K queries and streaming medians (with two heaps).</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAudio}
+            title={isAudioEnabled ? "Disable Narration" : "Enable Narration"}
+            className={`flex items-center gap-2 ${isAudioEnabled ? 'bg-green-100/50 text-green-600 border-green-200 hover:bg-green-200/50 hover:text-green-700' : 'text-muted-foreground hover:bg-muted'}`}
+          >
+            {isAudioEnabled ? <><Volume2 className="h-4 w-4" /> Audio On</> : <><VolumeX className="h-4 w-4" /> Audio Off</>}
+          </Button>
+        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
